@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AI Background Remover</title>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -152,14 +154,22 @@
       <h1>🖼️ AI Background Remover</h1>
       <div class="subtitle">Remove image backgrounds with AI</div>
       
-      <div id="userArea" style="display: none;">
-        <img id="userAvatar" class="user-avatar" alt="Avatar">
-        <span id="userName" class="user-name"></span>
+      <!-- Login button (shown when not logged in) -->
+      <div id="loginBtn" style="position: absolute; top: 20px; right: 20px;">
+        <button onclick="signInWithGoogle()" style="background: white; color: #333; padding: 8px 16px; border-radius: 20px; border: none; cursor: pointer; font-size: 14px; font-weight: 500; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">Sign in</button>
       </div>
-      <a id="loginBtn" href="/auth/google" class="login-btn">
-        <img src="https://www.google.com/favicon.ico" alt="Google" width="16" height="16">
-        Sign in with Google
-      </a>
+      
+      <!-- User area (shown when logged in) -->
+      <div id="userArea" style="display: none; position: absolute; top: 20px; right: 20px;">
+        <div style="position: relative;">
+          <img id="userAvatar" style="width: 36px; height: 36px; border-radius: 50%; cursor: pointer; border: 2px solid white;" onclick="toggleUserMenu()" title="Account">
+          <!-- Dropdown menu (hidden by default) -->
+          <div id="userMenu" style="display: none; position: absolute; top: 42px; right: 0; background: white; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); min-width: 150px; z-index: 100; overflow: hidden;">
+            <div style="padding: 12px; border-bottom: 1px solid #eee; color: #333; font-size: 14px; text-align: center;" id="userName"></div>
+            <button onclick="signOut()" style="width: 100%; padding: 10px; background: none; border: none; cursor: pointer; color: #666; font-size: 14px; text-align: center;">Logout</button>
+          </div>
+        </div>
+      </div>
     </div>
     
     <div class="content">
@@ -203,7 +213,7 @@
   </div>
 
   <script>
-    const API_BASE = '/api';
+    const API_BASE = '';
     
     const uploadArea = document.getElementById('uploadArea');
     const fileInput = document.getElementById('fileInput');
@@ -218,23 +228,93 @@
     let selectedFile = null;
     let resultData = null;
 
+    // Firebase configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyDzwv4aGmRzBA-t4tOsMF6JAwXmUAzJQ2g",
+      authDomain: "image-background-remove-cdc6d.firebaseapp.com",
+      projectId: "image-background-remove-cdc6d",
+      storageBucket: "image-background-remove-cdc6d.firebasestorage.app",
+      messagingSenderId: "155957397056",
+      appId: "1:155957397056:web:a227c9487b32a1c16ac1a5"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const googleProvider = new firebase.auth.GoogleAuthProvider();
+
     // Check login status
     async function checkAuthStatus() {
-      try {
-        const res = await fetch(API_BASE + '/auth/status');
-        const data = await res.json();
-        if (data.isAuthenticated) {
+      auth.onAuthStateChanged((user) => {
+        if (user) {
           document.getElementById('loginBtn').style.display = 'none';
-          document.getElementById('userArea').style.display = 'flex';
-          document.getElementById('userName').textContent = data.user.name;
-          if (data.user.avatar) {
-            document.getElementById('userAvatar').src = data.user.avatar;
+          document.getElementById('userArea').style.display = 'block';
+          document.getElementById('userName').textContent = user.displayName || user.email;
+          if (user.photoURL) {
+            document.getElementById('userAvatar').src = user.photoURL;
           }
+        } else {
+          document.getElementById('loginBtn').style.display = 'block';
+          document.getElementById('userArea').style.display = 'none';
         }
-      } catch (e) {
-        console.error('Failed to get auth status:', e);
-      }
+      });
     }
+
+    // Sign in with Google
+    let isSigningIn = false;
+    window.signInWithGoogle = function() {
+      if (isSigningIn) return;
+      isSigningIn = true;
+      
+      auth.signInWithPopup(googleProvider)
+        .then((result) => {
+          console.log('Signed in:', result.user);
+          isSigningIn = false;
+        })
+        .catch((error) => {
+          console.error('Sign in error:', error);
+          isSigningIn = false;
+          if (error.code === 'auth/cancelled-popup-request') {
+            // Ignore this error, user cancelled
+          } else {
+            alert('Sign in failed: ' + error.message);
+          }
+        });
+    };
+
+    // Sign out
+    window.signOut = function() {
+      auth.signOut()
+        .then(() => {
+          document.getElementById('loginBtn').style.display = 'block';
+          document.getElementById('userArea').style.display = 'none';
+          document.getElementById('userMenu').style.display = 'none';
+        })
+        .catch((error) => {
+          console.error('Sign out error:', error);
+        });
+    };
+
+    // Toggle user menu
+    window.toggleUserMenu = function() {
+      const menu = document.getElementById('userMenu');
+      menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+    };
+
+    // Close menu when clicking outside
+    document.addEventListener('click', function(e) {
+      const menu = document.getElementById('userMenu');
+      const avatar = document.getElementById('userAvatar');
+      if (menu && !menu.contains(e.target) && !avatar.contains(e.target)) {
+        menu.style.display = 'none';
+      }
+    });
+
+    // Update login button to use Firebase
+    document.getElementById('loginBtn').onclick = function(e) {
+      e.preventDefault();
+      signInWithGoogle();
+    };
 
     // Check auth on load
     checkAuthStatus();
