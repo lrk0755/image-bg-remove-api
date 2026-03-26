@@ -1,0 +1,8 @@
+name = "image-bg-remove-api"
+compatibility_date = "2024-01-01"
+
+[vars]
+REMOVE_BG_API_KEY = "1teo3E5gQ5Rk82dN7CCXFZ1G"
+
+[assets]
+directory = "./static"

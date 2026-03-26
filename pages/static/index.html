@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Background Remover</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      overflow: hidden;
+    }
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 30px;
+      text-align: center;
+      position: relative;
+    }
+    .header h1 { font-size: 28px; margin-bottom: 10px; }
+    .header .subtitle { font-size: 14px; opacity: 0.9; }
+    
+    .login-btn {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      background: white;
+      color: #333;
+      text-decoration: none;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 500;
+      transition: all 0.3s;
+    }
+    .login-btn:hover { background: #f5f5f5; }
+    .user-info {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: white;
+    }
+    .user-avatar { width: 36px; height: 36px; border-radius: 50%; }
+    .user-name { font-size: 14px; }
+    
+    .content { padding: 30px; }
+    
+    .status-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding: 12px 15px;
+      background: #f5f5f5;
+      border-radius: 10px;
+      font-size: 13px;
+    }
+    .status-key { color: #28a745; font-size: 12px; }
+    
+    .upload-area {
+      border: 3px dashed #ddd;
+      border-radius: 15px;
+      padding: 40px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .upload-area:hover { border-color: #667eea; background: #f8f9ff; }
+    .upload-area.dragover { border-color: #667eea; background: #f0f3ff; }
+    .upload-icon { font-size: 48px; margin-bottom: 15px; }
+    .upload-text { color: #666; }
+    .upload-hint { color: #999; font-size: 12px; margin-top: 10px; }
+    
+    .preview-area { display: none; margin-top: 30px; }
+    .preview-area.show { display: block; }
+    .preview-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    .preview-box {
+      background: #f5f5f5;
+      border-radius: 10px;
+      padding: 15px;
+      text-align: center;
+    }
+    .preview-box h3 { margin-bottom: 10px; color: #333; }
+    .preview-box img { max-width: 100%; border-radius: 8px; }
+    .preview-original { background: repeating-conic-gradient(#ccc 0% 25%, white 0% 50%) 50% / 20px 20px; }
+    
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 15px 30px;
+      margin-top: 20px;
+      font-size: 18px;
+      font-weight: bold;
+      color: white;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .btn:hover { transform: scale(1.02); }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .btn-download {
+      background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+      display: none;
+    }
+    .btn-download.show { display: block; }
+    
+    .loading {
+      display: none;
+      text-align: center;
+      padding: 20px;
+    }
+    .loading.show { display: block; }
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #667eea;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 15px;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    
+    input[type="file"] { display: none; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🖼️ AI Background Remover</h1>
+      <div class="subtitle">Remove image backgrounds with AI</div>
+      
+      <div id="userArea" style="display: none;">
+        <img id="userAvatar" class="user-avatar" alt="Avatar">
+        <span id="userName" class="user-name"></span>
+      </div>
+      <a id="loginBtn" href="/auth/google" class="login-btn">
+        <img src="https://www.google.com/favicon.ico" alt="Google" width="16" height="16">
+        Sign in with Google
+      </a>
+    </div>
+    
+    <div class="content">
+      <div class="status-bar">
+        <div>🖼️ AI Background Remover</div>
+      </div>
+      
+      <div class="upload-area" id="uploadArea">
+        <div class="upload-icon">📁</div>
+        <div class="upload-text">Click or drag image here</div>
+        <div class="upload-hint">Supports PNG, JPG, WebP up to 10MB</div>
+      </div>
+      <input type="file" id="fileInput" accept="image/*">
+      
+      <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <div id="loadingText">Processing...</div>
+      </div>
+      
+      <div class="preview-area" id="previewArea">
+        <div class="preview-grid">
+          <div class="preview-box preview-original">
+            <h3>Original</h3>
+            <img id="originalImg" alt="Original">
+          </div>
+          <div class="preview-box">
+            <h3>Result</h3>
+            <img id="resultImg" alt="Result">
+          </div>
+        </div>
+        <button class="btn btn-download" id="downloadBtn">⬇️ Download</button>
+      </div>
+      
+      <button class="btn" id="processBtn" style="display:none">✨ Remove Background</button>
+      
+      <div style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 10px; font-size: 13px;">
+        <div style="font-weight: bold; margin-bottom: 10px; color: #333;">📋 How it works</div>
+        <div style="color: #666;">Upload an image and AI will automatically remove the background</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = '/api';
+    
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('fileInput');
+    const processBtn = document.getElementById('processBtn');
+    const previewArea = document.getElementById('previewArea');
+    const loading = document.getElementById('loading');
+    const loadingText = document.getElementById('loadingText');
+    const originalImg = document.getElementById('originalImg');
+    const resultImg = document.getElementById('resultImg');
+    const downloadBtn = document.getElementById('downloadBtn');
+
+    let selectedFile = null;
+    let resultData = null;
+
+    // Check login status
+    async function checkAuthStatus() {
+      try {
+        const res = await fetch(API_BASE + '/auth/status');
+        const data = await res.json();
+        if (data.isAuthenticated) {
+          document.getElementById('loginBtn').style.display = 'none';
+          document.getElementById('userArea').style.display = 'flex';
+          document.getElementById('userName').textContent = data.user.name;
+          if (data.user.avatar) {
+            document.getElementById('userAvatar').src = data.user.avatar;
+          }
+        }
+      } catch (e) {
+        console.error('Failed to get auth status:', e);
+      }
+    }
+
+    // Check auth on load
+    checkAuthStatus();
+
+    // Upload click
+    uploadArea.addEventListener('click', () => fileInput.click());
+
+    // Drag & drop
+    uploadArea.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadArea.classList.add('dragover');
+    });
+    uploadArea.addEventListener('dragleave', () => {
+      uploadArea.classList.remove('dragover');
+    });
+    uploadArea.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadArea.classList.remove('dragover');
+      const file = e.dataTransfer.files[0];
+      if (file) handleFile(file);
+    });
+
+    // File select
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) handleFile(file);
+    });
+
+    function handleFile(file) {
+      if (!file.type.startsWith('image/')) {
+        alert('Please select an image file');
+        return;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        alert('Image size cannot exceed 10MB');
+        return;
+      }
+      
+      selectedFile = file;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        originalImg.src = e.target.result;
+        uploadArea.style.display = 'none';
+        processBtn.style.display = 'block';
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // Process image
+    processBtn.addEventListener('click', async () => {
+      if (!selectedFile) return;
+
+      processBtn.style.display = 'none';
+      loading.classList.add('show');
+      loadingText.textContent = '🔄 Processing...';
+
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const base64 = e.target.result.split(',')[1];
+        
+        try {
+          const res = await fetch(API_BASE + '/api/remove-bg', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ image: base64 })
+          });
+          
+          const data = await res.json();
+          
+          if (data.error) {
+            throw new Error(data.error);
+          }
+          
+          resultData = data.image;
+          resultImg.src = 'data:image/png;base64,' + data.image;
+          previewArea.classList.add('show');
+          downloadBtn.classList.add('show');
+          loading.classList.remove('show');
+        } catch (error) {
+          alert('Processing failed: ' + error.message);
+          console.error(error);
+          loading.classList.remove('show');
+          processBtn.style.display = 'block';
+        }
+      };
+      reader.readAsDataURL(selectedFile);
+    });
+
+    // Download
+    downloadBtn.addEventListener('click', () => {
+      if (!resultData) return;
+      const link = document.createElement('a');
+      link.download = 'removed-bg.png';
+      link.href = 'data:image/png;base64,' + resultData;
+      link.click();
+    });
+  </script>
+</body>
+</html>
