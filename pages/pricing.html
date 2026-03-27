@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pricing - AI Background Remover</title>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
   <!-- PayPal SDK - loaded dynamically -->
   <script id="paypal-sdk"></script>
   <style>
@@ -525,6 +527,19 @@
     // PayPal Client ID - using the provided ID
     const PAYPAL_CLIENT_ID = 'AWXT8wDvCx3g08C4Ovk4ZEmkLFoSpcgvTyMVZqMp2RURFwvJiGcw3Er5cXTChwvDKtYMZYzbiJPfIhdI';
     
+    // Firebase configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyDzwv4aGmRzBA-t4tOsMF6JAwXmUAzJQ2g",
+      authDomain: "image-background-remove-cdc6d.firebaseapp.com",
+      projectId: "image-background-remove-cdc6d",
+      storageBucket: "image-background-remove-cdc6d.firebasestorage.app",
+      messagingSenderId: "155957397056",
+      appId: "1:155957397056:web:a227c9487b32a1c16ac1a5"
+    };
+    
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    
     // Get current user ID from Firebase
     function getCurrentUserId() {
       const user = firebase.auth().currentUser;
@@ -598,36 +613,37 @@
               
               // Get user ID and add credits via API
               const userId = getCurrentUserId();
-              if (userId) {
-                // Call backend to add credits
-                const addCreditsResp = await fetch('/api/user/add-credits', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    userId: userId,
-                    credits: pack.credits,
-                    orderId: captureResult.id,
-                    packId: packId
-                  })
-                });
-                
-                const addCreditsResult = await addCreditsResp.json();
-                console.log('Add credits result:', addCreditsResult);
-                
-                // Show success modal
+              if (!userId) {
+                // Not logged in - show message to sign in first
                 showModal(
-                  '✅',
-                  'Payment Successful!',
-                  `${pack.credits} credits have been added to your account!`
+                  'ℹ️',
+                  'Please Sign In First',
+                  'You need to sign in with Google before purchasing credits. Click Continue to sign in.'
                 );
-              } else {
-                // No user logged in - show different message
-                showModal(
-                  '✅',
-                  'Payment Successful!',
-                  `${pack.credits} credits purchased! Please sign in to claim them.`
-                );
+                return;
               }
+              
+              // Call backend to add credits
+              const addCreditsResp = await fetch('/api/add-credits', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  userId: userId,
+                  credits: pack.credits,
+                  orderId: captureResult.id,
+                  packId: packId
+                })
+              });
+              
+              const addCreditsResult = await addCreditsResp.json();
+              console.log('Add credits result:', addCreditsResult);
+              
+              // Show success modal
+              showModal(
+                '✅',
+                'Payment Successful!',
+                `${pack.credits} credits have been added to your account!`
+              );
               
             } catch (error) {
               console.error('Payment capture error:', error);
