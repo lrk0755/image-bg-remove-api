@@ -15,6 +15,7 @@ const session = require('express-session');
 const passport = require('passport');
 const authRoutes = require('../routes/auth');
 const userRoutes = require('../routes/user');
+const { checkQuota, trackGuestUsage, deductCredit, users } = require('../routes/user');
 
 // Session configuration
 const sessionConfig = {

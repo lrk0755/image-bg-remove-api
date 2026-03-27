@@ -25,6 +25,9 @@ const usageLogs = [];
 module.exports = router;
 module.exports.users = users;
 module.exports.CREDIT_PACKS = CREDIT_PACKS;
+module.exports.checkQuota = checkQuota;
+module.exports.trackGuestUsage = trackGuestUsage;
+module.exports.deductCredit = deductCredit;
 
 // ============ Quota Checking ============
 
