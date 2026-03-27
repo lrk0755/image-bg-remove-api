@@ -525,6 +525,12 @@
     // PayPal Client ID - using the provided ID
     const PAYPAL_CLIENT_ID = 'AWXT8wDvCx3g08C4Ovk4ZEmkLFoSpcgvTyMVZqMp2RURFwvJiGcw3Er5cXTChwvDKtYMZYzbiJPfIhdI';
     
+    // Get current user ID from Firebase
+    function getCurrentUserId() {
+      const user = firebase.auth().currentUser;
+      return user ? user.uid : null;
+    }
+    
     // Load PayPal SDK dynamically
     function loadPayPalSDK() {
       const script = document.createElement('script');
@@ -562,12 +568,18 @@
           },
           
           createOrder: function(data, actions) {
+            const userId = getCurrentUserId();
             return actions.order.create({
               purchase_units: [{
                 description: `${packId.charAt(0).toUpperCase() + packId.slice(1)} Pack - ${pack.credits} credits`,
                 amount: {
                   value: pack.price.toFixed(2)
-                }
+                },
+                custom_id: JSON.stringify({
+                  userId: userId,
+                  packId: packId,
+                  credits: pack.credits
+                })
               }],
               application_context: {
                 brand_name: 'AI Background Remover',
@@ -584,12 +596,38 @@
               const captureResult = await actions.order.capture();
               console.log('PayPal capture result:', captureResult);
               
-              // Show success modal
-              showModal(
-                '✅',
-                'Payment Successful!',
-                `${pack.credits} credits will be added to your account shortly.`
-              );
+              // Get user ID and add credits via API
+              const userId = getCurrentUserId();
+              if (userId) {
+                // Call backend to add credits
+                const addCreditsResp = await fetch('/api/user/add-credits', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    userId: userId,
+                    credits: pack.credits,
+                    orderId: captureResult.id,
+                    packId: packId
+                  })
+                });
+                
+                const addCreditsResult = await addCreditsResp.json();
+                console.log('Add credits result:', addCreditsResult);
+                
+                // Show success modal
+                showModal(
+                  '✅',
+                  'Payment Successful!',
+                  `${pack.credits} credits have been added to your account!`
+                );
+              } else {
+                // No user logged in - show different message
+                showModal(
+                  '✅',
+                  'Payment Successful!',
+                  `${pack.credits} credits purchased! Please sign in to claim them.`
+                );
+              }
               
             } catch (error) {
               console.error('Payment capture error:', error);
