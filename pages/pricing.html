@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pricing - AI Background Remover</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    :root {
+      --primary: #667eea;
+      --secondary: #764ba2;
+      --success: #10b981;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+    
+    .container { max-width: 1200px; margin: 0 auto; }
+    
+    h1 {
+      color: white;
+      text-align: center;
+      font-size: 42px;
+      margin-bottom: 10px;
+    }
+    
+    .subtitle {
+      color: rgba(255,255,255,0.85);
+      text-align: center;
+      margin-bottom: 15px;
+      font-size: 18px;
+    }
+    
+    .try-free {
+      text-align: center;
+      margin-bottom: 50px;
+    }
+    
+    .try-btn {
+      display: inline-block;
+      padding: 14px 32px;
+      background: white;
+      color: var(--primary);
+      font-size: 16px;
+      font-weight: 600;
+      border-radius: 30px;
+      text-decoration: none;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+    
+    .try-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+    }
+    
+    .try-hint {
+      color: rgba(255,255,255,0.7);
+      font-size: 13px;
+      margin-top: 10px;
+    }
+    
+    /* Pricing Cards */
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 30px;
+      margin-bottom: 60px;
+      max-width: 900px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    
+    .plan-card {
+      background: white;
+      border-radius: 24px;
+      padding: 40px;
+      text-align: center;
+      position: relative;
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+    
+    .plan-card:hover {
+      transform: translateY(-10px);
+      box-shadow: 0 30px 60px rgba(0,0,0,0.25);
+    }
+    
+    .plan-card.popular {
+      border: 3px solid var(--primary);
+    }
+    
+    .badge {
+      position: absolute;
+      top: -15px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: white;
+      padding: 8px 24px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    
+    .plan-icon { font-size: 56px; margin-bottom: 20px; }
+    
+    .plan-name {
+      font-size: 24px;
+      font-weight: 700;
+      color: #333;
+      margin-bottom: 15px;
+    }
+    
+    .price {
+      margin-bottom: 30px;
+    }
+    
+    .price-amount {
+      font-size: 56px;
+      font-weight: 800;
+      color: var(--primary);
+    }
+    
+    .price-period {
+      font-size: 16px;
+      color: #888;
+    }
+    
+    .price-per {
+      font-size: 14px;
+      color: #999;
+      margin-top: 5px;
+    }
+    
+    .features {
+      text-align: left;
+      margin-bottom: 30px;
+    }
+    
+    .feature {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 0;
+      font-size: 15px;
+      color: #444;
+    }
+    
+    .feature-icon {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      flex-shrink: 0;
+    }
+    
+    .feature-icon.yes { background: #d1fae5; color: #10b981; }
+    
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 16px;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+      border: none;
+      transition: all 0.3s;
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      transform: scale(1.02);
+      box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+    }
+    
+    .btn-outline {
+      background: transparent;
+      border: 2px solid var(--primary);
+      color: var(--primary);
+    }
+    
+    .btn-outline:hover {
+      background: var(--primary);
+      color: white;
+    }
+    
+    /* How it Works */
+    .how-it-works {
+      background: white;
+      border-radius: 24px;
+      padding: 40px;
+      margin-bottom: 60px;
+      max-width: 800px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    
+    .how-it-works h2 {
+      text-align: center;
+      color: #333;
+      margin-bottom: 40px;
+    }
+    
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 30px;
+    }
+    
+    .step {
+      text-align: center;
+    }
+    
+    .step-number {
+      width: 48px;
+      height: 48px;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      font-weight: 700;
+      margin: 0 auto 15px;
+    }
+    
+    .step-title {
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 8px;
+    }
+    
+    .step-desc {
+      font-size: 14px;
+      color: #666;
+      line-height: 1.6;
+    }
+    
+    /* FAQ */
+    .faq {
+      background: white;
+      border-radius: 24px;
+      padding: 40px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    
+    .faq h2 {
+      text-align: center;
+      margin-bottom: 40px;
+      color: #333;
+    }
+    
+    .faq-item {
+      border-bottom: 1px solid #eee;
+      padding: 20px 0;
+    }
+    
+    .faq-item:last-child { border-bottom: none; }
+    
+    .faq-question {
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 10px;
+    }
+    
+    .faq-answer {
+      color: #666;
+      line-height: 1.7;
+      font-size: 14px;
+    }
+    
+    /* Payment Modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .modal-overlay.show { display: flex; }
+    
+    .modal {
+      background: white;
+      border-radius: 24px;
+      padding: 40px;
+      max-width: 450px;
+      width: 90%;
+      text-align: center;
+      position: relative;
+    }
+    
+    .modal-close {
+      position: absolute;
+      top: 15px;
+      right: 20px;
+      background: none;
+      border: none;
+      font-size: 28px;
+      color: #999;
+      cursor: pointer;
+    }
+    
+    .modal h3 { font-size: 24px; margin-bottom: 10px; color: #333; }
+    .modal p { color: #666; margin-bottom: 25px; }
+    
+    .credits-select {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 15px;
+      margin-bottom: 25px;
+    }
+    
+    .credit-option {
+      padding: 20px 15px;
+      border: 2px solid #eee;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    
+    .credit-option:hover,
+    .credit-option.selected {
+      border-color: var(--primary);
+      background: #f8f9ff;
+    }
+    
+    .credit-option .amount {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--primary);
+    }
+    
+    .credit-option .label {
+      font-size: 12px;
+      color: #888;
+    }
+    
+    .credit-option .price {
+      font-size: 18px;
+      font-weight: 600;
+      color: #333;
+      margin-top: 8px;
+    }
+    
+    .credit-option .savings {
+      font-size: 11px;
+      color: #10b981;
+      margin-top: 4px;
+    }
+    
+    .payment-methods {
+      display: flex;
+      gap: 15px;
+      margin: 25px 0;
+    }
+    
+    .payment-method {
+      flex: 1;
+      padding: 16px;
+      border: 2px solid #eee;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    
+    .payment-method:hover,
+    .payment-method.selected {
+      border-color: var(--primary);
+      background: #f8f9ff;
+    }
+    
+    .payment-method .icon { font-size: 24px; margin-bottom: 6px; }
+    .payment-method .name { font-size: 13px; color: #333; }
+    
+    .btn-pay {
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    
+    .secure-note {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      color: #888;
+      font-size: 12px;
+      margin-top: 15px;
+    }
+    
+    @media (max-width: 768px) {
+      .steps { grid-template-columns: 1fr; }
+      .credits-select { grid-template-columns: 1fr; }
+      .pricing-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Pay Only for What You Use</h1>
+    <p class="subtitle">No subscriptions. No commitments. Start free, pay as you go.</p>
+    
+    <div class="try-free">
+      <a href="/" class="try-btn">🚀 Try It Free - 1 Use with Watermark</a>
+      <p class="try-hint">No signup required • Watermark on free previews • Sign up for 3 FREE credits</p>
+    </div>
+    
+    <div class="pricing-grid">
+      <!-- Free Trial -->
+      <div class="plan-card">
+        <div class="plan-icon">🆓</div>
+        <div class="plan-name">Free Trial</div>
+        <div class="price">
+          <span class="price-amount">$0</span>
+        </div>
+        <div class="features">
+          <div class="feature">
+            <span class="feature-icon yes">✓</span>
+            <span>1 free use (no signup)</span>
+          </div>
+          <div class="feature">
+            <span class="feature-icon yes">✓</span>
+            <span>Watermarked preview</span>
+          </div>
+          <div class="feature">
+            <span class="feature-icon yes">✓</span>
+            <span>Standard quality</span>
+          </div>
+          <div class="feature">
+            <span class="feature-icon yes">✓</span>
+            <span>See quality before you pay</span>
+          </div>
+        </div>
+        <button class="btn btn-outline" onclick="selectPlan('trial')">Try Now</button>
+      </div>
+      
+      <!-- Credits Pack - Starter -->
+      <div class="plan-card">
+        <div class="plan-icon">📦</div>
+        <div class="plan-name">Starter Pack</div>
+        <div class="price">
+          <span class="price-amount">$3</span>
+          <span class="price-period">one-time</span>
+        </div>
+        <div class="price-per">10 credits · $0.30/credit</div>
+        <div class="features">
+          <div class="feature">
+            <span class="feature-icon yes">✓</span>
+            <span>10 credits</span>
+          </div>
+          <div class="feature">
+            <span class="feature-icon yes">✓</span>
+            <span>No watermark</span>
+          </div>
+          <div class="feature">
+            <span class="feature-icon yes">✓</span>
+            <span>High quality output</span>
+          </div>
+          <div class="feature">
+            <span class="feature-icon yes">✓</span>
+            <span>Credits never expire</span>
+          </div>
+          <div class="feature">
+            <span class="feature-icon yes">✓</span>
+            <span>30-day history</span>
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="buyCredits(10, 3.00)">Buy $3</button>
+      </div>
+      
+      <!-- Credits Pack - Most Popular -->
+      <div class="plan-card popular">
+        <span class="badge">BEST VALUE</span>
+        <div class="plan-icon">⭐</div>
+        <div class="plan-name">Popular Pack</div>
+        <div class="price">
+          <span class="price-amount">$6</span>
+          <span class="price-period">one-time</span>
+        </div>
+        <div class="price-per">30 credits · $0.20/credit</div>
+        <div class="features">
+          <div class="feature">
+            <span class="feature-icon yes">✓</span>
+            <span>30 credits</span>
+          </div>
+          <div class="feature">
+            <span class="feature-icon yes">✓</span>
+            <span>No watermark</span>
+          </div>
+          <div class="feature">
+            <span class="feature-icon yes">✓</span>
+            <span>High quality output</span>
+          </div>
+          <div class="feature">
+            <span class="feature-icon yes">✓</span>
+            <span>Credits never expire</span>
+          </div>
+          <div class="feature">
+            <span class="feature-icon yes">✓</span>
+            <span>60-day history</span>
+          </div>
+          <div class="feature">
+            <span class="feature-icon yes">✓</span>
+            <span>Priority support</span>
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="buyCredits(30, 6.00)">Buy $6</button>
+      </div>
+      
+      <!-- Credits Pack - Best Savings -->
+      <div class="plan-card">
+        <div class="plan-icon">🚀</div>
+        <div class="plan-name">Power Pack</div>
+        <div class="price">
+          <span class="price-amount">$15</span>
+          <span class="price-period">one-time</span>
+        </div>
+        <div class="price-per">100 credits · $0.15/credit</div>
+        <div class="features">
+          <div class="feature">
+            <span class="feature-icon yes">✓</span>
+            <span>100 credits</span>
+          </div>
+          <div class="feature">
+            <span class="feature-icon yes">✓</span>
+            <span>No watermark</span>
+          </div>
+          <div class="feature">
+            <span class="feature-icon yes">✓</span>
+            <span>Premium quality</span>
+          </div>
+          <div class="feature">
+            <span class="feature-icon yes">✓</span>
+            <span>Credits never expire</span>
+          </div>
+          <div class="feature">
+            <span class="feature-icon yes">✓</span>
+            <span>1-year history</span>
+          </div>
+          <div class="feature">
+            <span class="feature-icon yes">✓</span>
+            <span>VIP support</span>
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="buyCredits(100, 15.00)">Buy $15</button>
+      </div>
+    </div>
+    
+    <!-- How it Works -->
+    <div class="how-it-works">
+      <h2>How It Works</h2>
+      <div class="steps">
+        <div class="step">
+          <div class="step-number">1</div>
+          <div class="step-title">Try for Free</div>
+          <div class="step-desc">Process 1 image free with watermark. No signup needed.</div>
+        </div>
+        <div class="step">
+          <div class="step-number">2</div>
+          <div class="step-title">Sign Up Free</div>
+          <div class="step-desc">Get 3 FREE credits instantly. See results without watermark.</div>
+        </div>
+        <div class="step">
+          <div class="step-number">3</div>
+          <div class="step-title">Buy Credits</div>
+          <div class="step-desc">When you need more, buy credit packs. Use them anytime!</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- FAQ -->
+    <div class="faq">
+      <h2>Frequently Asked Questions</h2>
+      
+      <div class="faq-item">
+        <div class="faq-question">Q: Do I need to sign up to try?</div>
+        <div class="faq-answer">No! You can process 1 image free with a watermark, no signup required. See the quality before deciding.</div>
+      </div>
+      
+      <div class="faq-item">
+        <div class="faq-question">Q: What do I get when I sign up?</div>
+        <div class="faq-answer">You get 3 FREE credits instantly. No credit card needed. Use them anytime - they never expire.</div>
+      </div>
+      
+      <div class="faq-item">
+        <div class="faq-question">Q: How much does each credit cost?</div>
+        <div class="faq-answer">Credits start at $0.20 each when buying packs. The more you buy, the bigger the discount. Your credits never expire.</div>
+      </div>
+      
+      <div class="faq-item">
+        <div class="faq-question">Q: What happens to unused credits?</div>
+        <div class="faq-answer">Great news - your credits never expire! Buy a pack and use them at your own pace.</div>
+      </div>
+      
+      <div class="faq-item">
+        <div class="faq-question">Q: Can I get a refund?</div>
+        <div class="faq-answer">Yes! If you're not satisfied within 7 days of purchase, we'll refund any unused credits. No questions asked.</div>
+      </div>
+      
+      <div class="faq-item">
+        <div class="faq-question">Q: What payment methods do you accept?</div>
+        <div class="faq-answer">We accept all major credit cards (Visa, Mastercard, Amex), PayPal, Apple Pay, and Google Pay.</div>
+      </div>
+      
+      <div class="faq-item">
+        <div class="faq-question">Q: Is my data secure?</div>
+        <div class="faq-answer">Your images are processed and automatically deleted within 24 hours. We never store or share your photos.</div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Payment Modal -->
+  <div class="modal-overlay" id="paymentModal">
+    <div class="modal">
+      <button class="modal-close" onclick="closeModal()">×</button>
+      <h3>Buy Credits</h3>
+      <p>Pay only for what you use. Credits never expire.</p>
+      
+      <div class="credits-select">
+        <div class="credit-option" onclick="selectCredits(10, 3.00, this)">
+          <div class="amount">10</div>
+          <div class="label">credits</div>
+          <div class="price">$3.00</div>
+          <div class="savings">$0.30/credit</div>
+        </div>
+        <div class="credit-option selected" onclick="selectCredits(30, 6.00, this)">
+          <div class="amount">30</div>
+          <div class="label">credits</div>
+          <div class="price">$6.00</div>
+          <div class="savings">$0.20/credit ✓</div>
+        </div>
+        <div class="credit-option" onclick="selectCredits(100, 15.00, this)">
+          <div class="amount">100</div>
+          <div class="label">credits</div>
+          <div class="price">$15.00</div>
+          <div class="savings">$0.15/credit</div>
+        </div>
+      </div>
+      
+      <div class="payment-methods">
+        <div class="payment-method selected" onclick="selectPayment('card', this)">
+          <div class="icon">💳</div>
+          <div class="name">Card</div>
+        </div>
+        <div class="payment-method" onclick="selectPayment('paypal', this)">
+          <div class="icon">🔵</div>
+          <div class="name">PayPal</div>
+        </div>
+      </div>
+      
+      <button class="btn-pay" id="payBtn" onclick="confirmPayment()">
+        Pay $6.00
+      </button>
+      
+      <div class="secure-note">
+        🔒 Secure payment powered by Stripe
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    let selectedCredits = 30;
+    let selectedPrice = 6.00;
+    let selectedPayment = 'card';
+    
+    function selectCredits(credits, price, el) {
+      selectedCredits = credits;
+      selectedPrice = price;
+      document.querySelectorAll('.credit-option').forEach(e => e.classList.remove('selected'));
+      el.classList.add('selected');
+      document.getElementById('payBtn').textContent = `Pay $${price.toFixed(2)}`;
+    }
+    
+    function selectPayment(method, el) {
+      selectedPayment = method;
+      document.querySelectorAll('.payment-method').forEach(e => e.classList.remove('selected'));
+      el.classList.add('selected');
+    }
+    
+    function selectPlan(plan) {
+      if (plan === 'trial') {
+        window.location.href = '/';
+      }
+    }
+    
+    function signUp() {
+      window.location.href = '/auth/google';
+    }
+    
+    function buyCredits(credits, price) {
+      // Redirect to checkout or show payment modal
+      alert(`Demo: Buying ${credits} credits for $${price.toFixed(2)}\n\nIn production, this would redirect to Stripe checkout.`);
+    }
+    
+    function closeModal() {
+      document.getElementById('paymentModal').classList.remove('show');
+    }
+    
+    function confirmPayment() {
+      alert(`Demo: Buying ${selectedCredits} credits for $${selectedPrice.toFixed(2)}\n\nIn production, this would redirect to Stripe checkout.`);
+      closeModal();
+    }
+  </script>
+</body>
+</html>
