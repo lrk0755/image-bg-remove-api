@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pricing - AI Background Remover</title>
-  <script src="https://www.paypal.com/sdk/js?client-id=AWXT8wDvCx3g08C4Ovk4ZEmkLFoSpcgvTyMVZqMp2RURFwvJiGcw3Er5cXTChwvDKtYMZYzbiJPfIhdI&currency=USD" data-sdk-integration-source="button-factory"></script>
+  <script id="paypal-sdk" data-sdk-integration-source="button-factory"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     
@@ -462,6 +462,33 @@
       power: { credits: 100, price: 15.00 }
     };
     
+    let paypalLoaded = false;
+    
+    // Fetch config and initialize PayPal
+    async function init() {
+      try {
+        // Fetch public config
+        const configResp = await fetch('/api/config');
+        const config = await configResp.json();
+        
+        if (!config.paypalClientId) {
+          console.error('PayPal Client ID not configured');
+          return;
+        }
+        
+        // Dynamically load PayPal SDK
+        const script = document.getElementById('paypal-sdk');
+        script.src = `https://www.paypal.com/sdk/js?client-id=${config.paypalClientId}&currency=USD`;
+        script.onload = () => {
+          paypalLoaded = true;
+          initPayPalButtons();
+        };
+        
+      } catch (error) {
+        console.error('Failed to load config:', error);
+      }
+    }
+    
     // Get user ID from localStorage (set by Firebase auth)
     function getUserId() {
       return localStorage.getItem('userId') || null;
@@ -469,6 +496,11 @@
     
     // Initialize PayPal buttons
     function initPayPalButtons() {
+      if (typeof paypal === 'undefined') {
+        console.error('PayPal SDK not loaded');
+        return;
+      }
+      
       Object.keys(creditPacks).forEach(packId => {
         const pack = creditPacks[packId];
         
@@ -481,7 +513,6 @@
           },
           
           createOrder: function(data, actions) {
-            // This function is called when user clicks PayPal button
             return actions.order.create({
               purchase_units: [{
                 description: `${packId.charAt(0).toUpperCase() + packId.slice(1)} Pack - ${pack.credits} credits`,
@@ -497,33 +528,17 @@
           },
           
           onApprove: async function(data, actions) {
-            // This function is called after successful PayPal payment
             try {
-              // Capture the order
               const captureResult = await actions.order.capture();
-              
               console.log('PayPal capture result:', captureResult);
               
-              // Show success message
               const successEl = document.getElementById(`success-${packId}`);
               successEl.textContent = `✅ Payment successful! ${pack.credits} credits added to your account.`;
               successEl.classList.add('show');
               
-              // Hide after 5 seconds
               setTimeout(() => {
                 successEl.classList.remove('show');
               }, 5000);
-              
-              // In production, you would call your backend to credit the user
-              // await fetch('/api/user/credit', {
-              //   method: 'POST',
-              //   headers: { 'Content-Type': 'application/json' },
-              //   body: JSON.stringify({
-              //     userId: getUserId(),
-              //     credits: pack.credits,
-              //     orderId: captureResult.id
-              //   })
-              // });
               
             } catch (error) {
               console.error('Payment capture error:', error);
@@ -553,7 +568,6 @@
       const paymentStatus = urlParams.get('payment');
       
       if (paymentStatus === 'success') {
-        // Could show a global success message here
         console.log('Payment successful!');
       } else if (paymentStatus === 'cancelled') {
         console.log('Payment cancelled');
@@ -563,7 +577,7 @@
     // Initialize on load
     document.addEventListener('DOMContentLoaded', function() {
       checkPaymentResult();
-      initPayPalButtons();
+      init();
     });
   </script>
 </body>
