@@ -584,6 +584,15 @@
           
           createOrder: function(data, actions) {
             const userId = getCurrentUserId();
+            if (!userId) {
+              // Not logged in - show message and redirect to sign in
+              showModal(
+                '🔐',
+                'Please Sign In First',
+                'You need to sign in with Google before purchasing. Click below to sign in.'
+              );
+              return null; // Prevent PayPal dialog
+            }
             return actions.order.create({
               purchase_units: [{
                 description: `${packId.charAt(0).toUpperCase() + packId.slice(1)} Pack - ${pack.credits} credits`,
