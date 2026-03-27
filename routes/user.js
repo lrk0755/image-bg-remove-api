@@ -1,6 +1,6 @@
 /**
  * User Management Routes
- * Pay-as-you-go + Subscription model
+ * Pay-as-you-go model only
  */
 
 const express = require('express');
@@ -13,28 +13,6 @@ const CREDIT_PACKS = {
   power: { credits: 100, price: 15.00, name: 'Power Pack', type: 'credits' }
 };
 
-// Subscription plans - with monthly credit limits
-const SUBSCRIPTION_PLANS = {
-  monthly: {
-    name: 'Monthly',
-    price: 9.00,
-    interval: 'month',
-    monthlyCredits: 100,  // 100 credits per month
-    quality: 'high',
-    historyDays: 30
-  },
-  yearly: {
-    name: 'Yearly',
-    price: 79.00,
-    interval: 'year',
-    monthlyCredits: 200,  // 200 credits per month
-    quality: 'premium',
-    historyDays: 365,
-    trialDays: 7,
-    trialCredits: 200  // Trial credits
-  }
-};
-
 // Guest trial: 1 free use with watermark
 const MAX_GUEST_TRIALS = 1;
 
@@ -42,14 +20,11 @@ const MAX_GUEST_TRIALS = 1;
 const users = new Map();
 const guestTrials = new Map();
 const usageLogs = [];
-const purchaseLogs = [];
-const subscriptionLogs = [];
 
 // Export
 module.exports = router;
 module.exports.users = users;
 module.exports.CREDIT_PACKS = CREDIT_PACKS;
-module.exports.SUBSCRIPTION_PLANS = SUBSCRIPTION_PLANS;
 
 // ============ Quota Checking ============
 
@@ -85,56 +60,6 @@ function checkQuota(userId, ip) {
     };
   }
   
-  // Check subscription first
-  if (user.subscription?.active) {
-    const planInfo = SUBSCRIPTION_PLANS[user.subscription.plan];
-    
-    // Check monthly reset
-    const now = new Date();
-    const lastReset = new Date(user.subscription.lastReset || now);
-    if (now.getMonth() !== lastReset.getMonth() || now.getFullYear() !== lastReset.getFullYear()) {
-      // Reset monthly credits
-      user.subscription.monthlyCreditsUsed = 0;
-      user.subscription.lastReset = now.toISOString();
-    }
-    
-    const monthlyUsed = user.subscription.monthlyCreditsUsed || 0;
-    const monthlyLimit = planInfo.monthlyCredits;
-    const remaining = monthlyLimit - monthlyUsed;
-    
-    if (remaining <= 0) {
-      return {
-        allowed: false,
-        watermark: false,
-        remaining: 0,
-        code: 'MONTHLY_QUOTA_EXCEEDED',
-        message: `Monthly quota exhausted (${monthlyLimit} credits). Resets next month or upgrade!`,
-        requiresSignup: false,
-        requiresPurchase: true,
-        guest: false,
-        plan: 'subscription',
-        subscription: user.subscription,
-        monthlyLimit,
-        monthlyUsed
-      };
-    }
-    
-    return {
-      allowed: true,
-      watermark: false,
-      remaining,
-      code: null,
-      message: `${user.subscription.planName} - ${remaining}/${monthlyLimit} credits this month`,
-      requiresSignup: false,
-      requiresPurchase: false,
-      guest: false,
-      plan: 'subscription',
-      subscription: user.subscription,
-      monthlyLimit,
-      monthlyUsed
-    };
-  }
-  
   // Pay-as-you-go user
   const credits = user.credits || 0;
   return {
@@ -144,7 +69,7 @@ function checkQuota(userId, ip) {
     code: credits <= 0 ? 'NO_CREDITS' : null,
     message: credits > 0 
       ? `${credits} credit${credits !== 1 ? 's' : ''} remaining`
-      : 'No credits left. Buy more or subscribe!',
+      : 'No credits left. Buy more credits!',
     requiresSignup: false,
     requiresPurchase: credits <= 0,
     guest: false,
@@ -167,20 +92,7 @@ function trackGuestUsage(ip) {
 
 function deductCredit(userId) {
   const user = users.get(userId);
-  if (!user) return;
-  
-  if (user.subscription?.active) {
-    // Deduct from subscription monthly credits
-    user.subscription.monthlyCreditsUsed = (user.subscription.monthlyCreditsUsed || 0) + 1;
-    user.totalUsed = (user.totalUsed || 0) + 1;
-    
-    usageLogs.push({
-      type: 'subscription',
-      userId,
-      timestamp: new Date().toISOString()
-    });
-  } else if (user.credits > 0) {
-    // Deduct from pay-as-you-go credits
+  if (user && user.credits > 0) {
     user.credits -= 1;
     user.totalUsed = (user.totalUsed || 0) + 1;
     
@@ -215,11 +127,10 @@ router.post('/register', (req, res) => {
       credits: 3,  // Sign up bonus!
       totalPurchased: 0,
       totalUsed: 0,
-      subscription: null,
       createdAt: new Date().toISOString(),
       lastLogin: new Date().toISOString()
     };
-    console.log(`🎉 New user: ${email} (3 FREE credits!)`);
+    console.log(`New user: ${email} (3 FREE credits!)`);
   } else {
     user.lastLogin = new Date().toISOString();
   }
@@ -234,8 +145,7 @@ router.post('/register', (req, res) => {
       email: user.email,
       name: user.name,
       avatar: user.avatar,
-      credits: user.credits,
-      subscription: user.subscription
+      credits: user.credits
     }
   });
 });
@@ -265,7 +175,6 @@ router.get('/profile', (req, res) => {
       name: user.name,
       avatar: user.avatar,
       credits: user.credits,
-      subscription: user.subscription,
       totalPurchased: user.totalPurchased,
       totalUsed: user.totalUsed
     }
@@ -285,7 +194,6 @@ router.get('/quota', (req, res) => {
 router.get('/packs', (req, res) => {
   res.json({
     creditPacks: Object.entries(CREDIT_PACKS).map(([key, val]) => ({ id: key, ...val })),
-    subscriptionPlans: Object.entries(SUBSCRIPTION_PLANS).map(([key, val]) => ({ id: key, ...val })),
     currency: 'USD'
   });
 });
@@ -314,16 +222,7 @@ router.post('/purchase/credits', (req, res) => {
   user.credits += packInfo.credits;
   user.totalPurchased += packInfo.credits;
   
-  purchaseLogs.push({
-    userId,
-    type: 'credits',
-    pack,
-    credits: packInfo.credits,
-    amount: packInfo.price,
-    timestamp: new Date().toISOString()
-  });
-  
-  console.log(`💰 Credit purchase: ${packInfo.name} for ${user.email}`);
+  console.log(`Credit purchase: ${packInfo.name} for ${user.email}`);
   
   res.json({
     success: true,
@@ -331,107 +230,6 @@ router.post('/purchase/credits', (req, res) => {
     totalCredits: user.credits,
     message: `Purchased ${packInfo.name}!`
   });
-});
-
-// POST /purchase/subscription - Subscribe
-router.post('/purchase/subscription', (req, res) => {
-  const userId = req.user?.id;
-  
-  if (!userId) {
-    return res.status(401).json({ error: 'Please sign in to subscribe' });
-  }
-  
-  const { plan } = req.body;
-  const planInfo = SUBSCRIPTION_PLANS[plan];
-  
-  if (!planInfo) {
-    return res.status(400).json({ error: 'Invalid plan' });
-  }
-  
-  const user = users.get(userId);
-  if (!user) {
-    return res.status(401).json({ error: 'User not found' });
-  }
-  
-  // Calculate expiration
-  const now = new Date();
-  let expiresAt;
-  if (planInfo.trialDays) {
-    // Yearly has free trial
-    expiresAt = new Date(now.getTime() + planInfo.trialDays * 24 * 60 * 60 * 1000);
-    user.subscription = {
-      plan,
-      planName: planInfo.name,
-      active: true,
-      trial: true,
-      trialEndsAt: expiresAt.toISOString(),
-      renewsAt: new Date(expiresAt.getTime() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-      monthlyCreditsUsed: 0,
-      lastReset: now.toISOString(),
-      monthlyCredits: planInfo.monthlyCredits
-    };
-  } else {
-    expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-    user.subscription = {
-      plan,
-      planName: planInfo.name,
-      active: true,
-      trial: false,
-      renewsAt: expiresAt.toISOString(),
-      monthlyCreditsUsed: 0,
-      lastReset: now.toISOString(),
-      monthlyCredits: planInfo.monthlyCredits
-    };
-  }
-  
-  subscriptionLogs.push({
-    userId,
-    plan,
-    amount: planInfo.price,
-    timestamp: new Date().toISOString()
-  });
-  
-  console.log(`📅 Subscription: ${planInfo.name} for ${user.email}`);
-  
-  res.json({
-    success: true,
-    subscription: user.subscription,
-    message: planInfo.trialDays 
-      ? `Free trial started! ${planInfo.trialDays} days free, then $${planInfo.price}/${planInfo.interval}`
-      : `Subscribed to ${planInfo.name}!`
-  });
-});
-
-// POST /purchase/cancel - Cancel subscription
-router.post('/purchase/cancel', (req, res) => {
-  const userId = req.user?.id;
-  
-  if (!userId) {
-    return res.status(401).json({ error: 'Please sign in' });
-  }
-  
-  const user = users.get(userId);
-  if (!user) {
-    return res.status(401).json({ error: 'User not found' });
-  }
-  
-  if (user.subscription?.active) {
-    user.subscription.cancelled = true;
-    user.subscription.cancelledAt = new Date().toISOString();
-    
-    subscriptionLogs.push({
-      userId,
-      action: 'cancel',
-      timestamp: new Date().toISOString()
-    });
-    
-    res.json({
-      success: true,
-      message: 'Subscription cancelled. Access continues until period end.'
-    });
-  } else {
-    res.status(400).json({ error: 'No active subscription' });
-  }
 });
 
 // GET /history
