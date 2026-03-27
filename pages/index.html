@@ -234,10 +234,11 @@
       background: white;
       border-radius: 10px;
       box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+      min-width: 150px;
       z-index: 100;
       overflow: hidden;
     }
-    .user-menu.show { display: flex; }
+    .user-menu.show { display: block; }
     .user-menu-item {
       padding: 10px 14px;
       color: #333;
@@ -249,11 +250,7 @@
     }
     .user-menu-item:hover { background: #f5f5f5; }
     .user-menu-item.danger { color: #dc3545; }
-    .user-menu-divider { 
-      width: 1px; 
-      background: #eee; 
-      margin: 6px 0; 
-    }
+    .user-menu-divider { height: 1px; background: #eee; margin: 4px 0; }
     
     /* How it works - hidden when logged in */
     .how-it-works { transition: opacity 0.3s; }
@@ -279,7 +276,6 @@
         <img id="userAvatar" class="user-avatar" onclick="toggleUserMenu()">
         <div id="userMenu" class="user-menu">
           <a href="/account" class="user-menu-item">My Account</a>
-          <div class="user-menu-divider"></div>
           <a href="/pricing" class="user-menu-item">Buy Credits</a>
           <div class="user-menu-divider"></div>
           <div class="user-menu-item danger" onclick="signOut()">Logout</div>
