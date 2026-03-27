@@ -11,7 +11,7 @@ export async function onRequestPost(context) {
   }
 
   try {
-    const { userId, credits, orderId, packId } = await context.request.json();
+    const { userId, credits, orderId, packId, amount } = await context.request.json();
     
     if (!userId) {
       return new Response(JSON.stringify({ 
@@ -33,53 +33,68 @@ export async function onRequestPost(context) {
       });
     }
 
-    // In a real app, you would verify the PayPal payment here
-    // For now, we trust the capture result and add credits
-    
     // Credit packs mapping
     const creditPacks = {
-      starter: 10,
-      popular: 30,
-      power: 100
+      starter: { credits: 10, price: 3.00 },
+      popular: { credits: 30, price: 6.00 },
+      power: { credits: 100, price: 15.00 }
     };
     
-    // Get the users store from KV or in-memory
-    // For demo, we'll use a simple approach
-    const users = await context.env.USERS ? await context.env.USERS.get('users') : null;
-    let usersData = users ? JSON.parse(users) : {};
+    const packInfo = creditPacks[packId] || { credits: parseInt(credits), price: 0 };
+    const creditsToAdd = packInfo.credits;
+    const paymentAmount = packInfo.price;
     
-    if (!usersData[userId]) {
-      usersData[userId] = {
-        id: userId,
-        credits: 0,
-        totalPurchased: 0,
-        totalUsed: 0,
-        createdAt: new Date().toISOString()
-      };
+    // Check if order already processed (idempotency)
+    const existingPayment = await context.env.DB.prepare(
+      'SELECT * FROM payments WHERE order_id = ?'
+    ).bind(orderId).first();
+    
+    if (existingPayment) {
+      return new Response(JSON.stringify({
+        success: true,
+        creditsAdded: 0,
+        message: 'Payment already processed'
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
     
-    // Add credits
-    const creditsToAdd = creditPacks[packId] || parseInt(credits);
-    usersData[userId].credits += creditsToAdd;
-    usersData[userId].totalPurchased += creditsToAdd;
-    usersData[userId].lastPurchase = {
-      orderId,
-      packId,
-      credits: creditsToAdd,
-      at: new Date().toISOString()
-    };
+    // Get user
+    const user = await context.env.DB.prepare(
+      'SELECT * FROM users WHERE id = ?'
+    ).bind(userId).first();
     
-    // Save back
-    if (context.env.USERS) {
-      await context.env.USERS.put('users', JSON.stringify(usersData));
+    if (!user) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: 'User not found. Please sign in first.' 
+      }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
     
-    console.log(`Added ${creditsToAdd} credits to user ${userId}. Total: ${usersData[userId].credits}`);
+    // Insert payment record
+    await context.env.DB.prepare(
+      'INSERT INTO payments (user_id, order_id, pack_id, credits, amount) VALUES (?, ?, ?, ?, ?)'
+    ).bind(userId, orderId, packId, creditsToAdd, paymentAmount).run();
+    
+    // Update user credits
+    await context.env.DB.prepare(
+      'UPDATE users SET credits = credits + ?, total_purchased = total_purchased + ? WHERE id = ?'
+    ).bind(creditsToAdd, creditsToAdd, userId).run();
+    
+    // Get updated user
+    const updatedUser = await context.env.DB.prepare(
+      'SELECT credits FROM users WHERE id = ?'
+    ).bind(userId).first();
+    
+    console.log(`Added ${creditsToAdd} credits to user ${userId}. Total: ${updatedUser.credits}`);
     
     return new Response(JSON.stringify({
       success: true,
       creditsAdded: creditsToAdd,
-      totalCredits: usersData[userId].credits,
+      totalCredits: updatedUser.credits,
       message: `${creditsToAdd} credits added successfully!`
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }

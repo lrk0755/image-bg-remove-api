@@ -21,7 +21,6 @@
     
     .container { max-width: 1200px; margin: 30px auto; padding: 0 20px; }
     
-    /* Stats Cards */
     .stats-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -38,12 +37,12 @@
     .stat-value { font-size: 36px; font-weight: 800; color: #667eea; }
     .stat-label { font-size: 14px; color: #666; margin-top: 5px; }
     
-    /* Table */
     .card {
       background: white;
       border-radius: 16px;
       padding: 25px;
       box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+      margin-bottom: 20px;
     }
     .card-title { font-size: 18px; font-weight: 700; color: #333; margin-bottom: 20px; }
     
@@ -51,15 +50,6 @@
     th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #eee; }
     th { background: #f8f9fa; font-weight: 600; color: #333; }
     tr:hover { background: #f8f9fa; }
-    .badge {
-      display: inline-block;
-      padding: 4px 10px;
-      border-radius: 12px;
-      font-size: 12px;
-      font-weight: 600;
-    }
-    .badge-active { background: #d1fae5; color: #059669; }
-    .badge-guest { background: #fef3c7; color: #d97706; }
     
     .refresh-btn {
       background: #667eea;
@@ -71,6 +61,7 @@
       font-size: 14px;
     }
     .refresh-btn:hover { background: #5a71d6; }
+    .refresh-btn:disabled { opacity: 0.6; cursor: not-allowed; }
     
     .header-row {
       display: flex;
@@ -79,7 +70,9 @@
       margin-bottom: 20px;
     }
     
-    /* Payment History */
+    .loading { text-align: center; color: #999; padding: 40px; }
+    .error { text-align: center; color: #dc3545; padding: 20px; background: #fee2e2; border-radius: 8px; margin-bottom: 20px; }
+    
     .payment-item {
       padding: 15px;
       border-bottom: 1px solid #eee;
@@ -89,8 +82,20 @@
     }
     .payment-item:last-child { border-bottom: none; }
     .payment-info { font-size: 14px; }
-    .payment-amount { font-weight: 600; color: #059669; }
+    .payment-amount { font-weight: 600; color: #059669; font-size: 16px; }
     .payment-date { font-size: 12px; color: #999; }
+    
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .badge-active { background: #d1fae5; color: #059669; }
+    .badge-free { background: #fef3c7; color: #d97706; }
+    
+    .no-data { text-align: center; color: #999; padding: 40px; }
   </style>
 </head>
 <body>
@@ -100,6 +105,8 @@
   </div>
   
   <div class="container">
+    <div id="errorMessage" class="error" style="display: none;"></div>
+    
     <!-- Stats -->
     <div class="stats-grid">
       <div class="stat-card">
@@ -124,93 +131,105 @@
     <div class="card">
       <div class="header-row">
         <div class="card-title">Recent Users</div>
-        <button class="refresh-btn" onclick="loadStats()">🔄 Refresh</button>
+        <button class="refresh-btn" id="refreshBtn" onclick="loadStats()">🔄 Refresh</button>
       </div>
-      <table>
+      <div id="usersLoading" class="loading">Loading...</div>
+      <table id="usersTable" style="display: none;">
         <thead>
           <tr>
-            <th>User ID</th>
             <th>Email</th>
             <th>Credits</th>
             <th>Purchased</th>
             <th>Used</th>
-            <th>Status</th>
+            <th>Joined</th>
           </tr>
         </thead>
-        <tbody id="usersTable">
-          <tr><td colspan="6" style="text-align:center; color:#999;">Loading...</td></tr>
-        </tbody>
+        <tbody id="usersBody"></tbody>
       </table>
     </div>
-    
-    <div style="height: 20px;"></div>
     
     <!-- Recent Payments -->
     <div class="card">
       <div class="card-title">Recent Payments</div>
-      <div id="paymentsList">
-        <p style="text-align:center; color:#999;">No payments recorded yet</p>
-      </div>
+      <div id="paymentsLoading" class="loading">Loading...</div>
+      <div id="paymentsList"></div>
     </div>
   </div>
   
   <script>
-    // Demo stats - in production these would come from an API
-    const demoStats = {
-      totalUsers: 12,
-      totalCreditsSold: 156,
-      totalRevenue: 234,
-      guestTrials: 45,
-      users: [
-        { id: 'user_001', email: 'john@example.com', credits: 27, purchased: 30, used: 3, status: 'active' },
-        { id: 'user_002', email: 'jane@example.com', credits: 0, purchased: 100, used: 100, status: 'active' },
-        { id: 'user_003', email: 'bob@example.com', credits: 3, purchased: 3, used: 0, status: 'active' },
-      ],
-      payments: [
-        { date: '2026-03-27', pack: 'Popular', credits: 30, amount: '$6' },
-        { date: '2026-03-26', pack: 'Power', credits: 100, amount: '$15' },
-        { date: '2026-03-25', pack: 'Starter', credits: 10, amount: '$3' },
-      ]
-    };
-    
-    function loadStats() {
-      // In production, fetch from API
-      // For demo, use localStorage if available
-      const stored = localStorage.getItem('adminStats');
-      const stats = stored ? JSON.parse(stored) : demoStats;
+    async function loadStats() {
+      const btn = document.getElementById('refreshBtn');
+      btn.disabled = true;
+      btn.textContent = 'Loading...';
       
-      document.getElementById('totalUsers').textContent = stats.totalUsers || 0;
-      document.getElementById('totalCredits').textContent = stats.totalCreditsSold || 0;
-      document.getElementById('totalRevenue').textContent = '$' + (stats.totalRevenue || 0);
-      document.getElementById('guestTrials').textContent = stats.guestTrials || 0;
+      const errorEl = document.getElementById('errorMessage');
+      errorEl.style.display = 'none';
       
-      // Render users table
-      const tbody = document.getElementById('usersTable');
-      if (stats.users && stats.users.length > 0) {
-        tbody.innerHTML = stats.users.map(user => `
-          <tr>
-            <td><code style="font-size:12px">${user.id.substring(0, 12)}...</code></td>
-            <td>${user.email || '-'}</td>
-            <td><strong>${user.credits}</strong></td>
-            <td>${user.purchased}</td>
-            <td>${user.used}</td>
-            <td><span class="badge ${user.credits > 0 ? 'badge-active' : 'badge-guest'}">${user.credits > 0 ? 'Active' : 'Free'}</span></td>
-          </tr>
-        `).join('');
-      }
-      
-      // Render payments
-      const paymentsList = document.getElementById('paymentsList');
-      if (stats.payments && stats.payments.length > 0) {
-        paymentsList.innerHTML = stats.payments.map(p => `
-          <div class="payment-item">
-            <div class="payment-info">
-              <div><strong>${p.pack}</strong> - ${p.credits} credits</div>
-              <div class="payment-date">${p.date}</div>
+      try {
+        const resp = await fetch('/api/admin-stats');
+        
+        if (!resp.ok) {
+          throw new Error(`API error: ${resp.status}`);
+        }
+        
+        const data = await resp.json();
+        
+        // Update stats
+        document.getElementById('totalUsers').textContent = data.totalUsers || 0;
+        document.getElementById('totalCredits').textContent = data.totalCreditsSold || 0;
+        document.getElementById('totalRevenue').textContent = '$' + ((data.totalRevenue || 0).toFixed(2));
+        document.getElementById('guestTrials').textContent = data.guestTrials || 0;
+        
+        // Render users table
+        const usersBody = document.getElementById('usersBody');
+        const usersTable = document.getElementById('usersTable');
+        const usersLoading = document.getElementById('usersLoading');
+        
+        if (data.users && data.users.length > 0) {
+          usersLoading.style.display = 'none';
+          usersTable.style.display = 'table';
+          usersBody.innerHTML = data.users.map(user => `
+            <tr>
+              <td>${user.email || '-'}</td>
+              <td><strong>${user.credits}</strong></td>
+              <td>${user.total_purchased || 0}</td>
+              <td>${user.total_used || 0}</td>
+              <td>${user.created_at ? new Date(user.created_at).toLocaleDateString() : '-'}</td>
+            </tr>
+          `).join('');
+        } else {
+          usersLoading.style.display = 'none';
+          usersTable.style.display = 'none';
+          usersBody.innerHTML = '<tr><td colspan="5" class="no-data">No users yet</td></tr>';
+        }
+        
+        // Render payments
+        const paymentsList = document.getElementById('paymentsList');
+        const paymentsLoading = document.getElementById('paymentsLoading');
+        
+        if (data.payments && data.payments.length > 0) {
+          paymentsLoading.style.display = 'none';
+          paymentsList.innerHTML = data.payments.map(p => `
+            <div class="payment-item">
+              <div class="payment-info">
+                <div><strong>${p.pack_id}</strong> - ${p.credits} credits</div>
+                <div class="payment-date">${p.email || 'Unknown'} • ${new Date(p.created_at).toLocaleString()}</div>
+              </div>
+              <div class="payment-amount">$${p.amount.toFixed(2)}</div>
             </div>
-            <div class="payment-amount">${p.amount}</div>
-          </div>
-        `).join('');
+          `).join('');
+        } else {
+          paymentsLoading.style.display = 'none';
+          paymentsList.innerHTML = '<div class="no-data">No payments yet</div>';
+        }
+        
+      } catch (error) {
+        console.error('Failed to load stats:', error);
+        errorEl.textContent = 'Failed to load data: ' + error.message;
+        errorEl.style.display = 'block';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '🔄 Refresh';
       }
     }
     
