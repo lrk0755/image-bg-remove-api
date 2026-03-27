@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pricing - AI Background Remover</title>
-  <!-- PayPal SDK -->
-  <script src="https://www.paypal.com/sdk/js?client-id=AWXT8wDvCx3g08C4Ovk4ZEmkLFoSpcgvTyMVZqMp2RURFwvJiGcw3Er5cXTChwvDKtYMZYzbiJPfIhdI&currency=USD" data-sdk-integration-source="button-factory"></script>
+  <!-- PayPal SDK - loaded dynamically -->
+  <script id="paypal-sdk"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     
@@ -463,6 +463,27 @@
       power: { credits: 100, price: 15.00 }
     };
     
+    // PayPal Client ID - using the provided ID
+    const PAYPAL_CLIENT_ID = 'AWXT8wDvCx3g08C4Ovk4ZEmkLFoSpcgvTyMVZqMp2RURFwvJiGcw3Er5cXTChwvDKtYMZYzbiJPfIhdI';
+    
+    // Load PayPal SDK dynamically
+    function loadPayPalSDK() {
+      const script = document.createElement('script');
+      script.src = `https://www.paypal.com/sdk/js?client-id=${PAYPAL_CLIENT_ID}&currency=USD`;
+      script.async = true;
+      script.onload = function() {
+        console.log('PayPal SDK loaded successfully');
+        initPayPalButtons();
+      };
+      script.onerror = function() {
+        console.error('Failed to load PayPal SDK');
+        document.querySelectorAll('.paypal-btn-container').forEach(el => {
+          el.innerHTML = '<p style="color: red;">Failed to load payment options. Please disable ad blocker.</p>';
+        });
+      };
+      document.head.appendChild(script);
+    }
+    
     // Initialize PayPal buttons when SDK is ready
     function initPayPalButtons() {
       if (typeof paypal === 'undefined') {
@@ -560,14 +581,7 @@
     // Initialize on load
     document.addEventListener('DOMContentLoaded', function() {
       checkPaymentResult();
-      // PayPal SDK loads async, buttons init after SDK
-      if (typeof paypal !== 'undefined') {
-        initPayPalButtons();
-      } else {
-        window.addEventListener('load', function() {
-          setTimeout(initPayPalButtons, 500);
-        });
-      }
+      loadPayPalSDK();
     });
   </script>
 </body>
