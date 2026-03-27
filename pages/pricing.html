@@ -221,6 +221,55 @@
     }
     .error-message.show { display: block; }
     
+    /* Modal Overlay */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+    }
+    .modal-overlay.show { display: flex; }
+    
+    .modal {
+      background: white;
+      border-radius: 20px;
+      padding: 40px;
+      max-width: 400px;
+      width: 90%;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      animation: modalIn 0.3s ease-out;
+    }
+    
+    @keyframes modalIn {
+      from { transform: scale(0.8); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    
+    .modal-icon { font-size: 60px; margin-bottom: 20px; }
+    .modal-title { font-size: 24px; font-weight: 700; color: #333; margin-bottom: 15px; }
+    .modal-message { font-size: 16px; color: #666; margin-bottom: 25px; line-height: 1.6; }
+    .modal-btn {
+      padding: 12px 30px;
+      border: none;
+      border-radius: 25px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .modal-btn-primary {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: white;
+    }
+    .modal-btn-primary:hover { transform: scale(1.05); }
+    
     /* Comparison Table */
     .comparison {
       background: white;
@@ -455,6 +504,16 @@
     </div>
   </div>
   
+  <!-- Success/Error Modal -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+      <div class="modal-icon" id="modalIcon">✅</div>
+      <div class="modal-title" id="modalTitle">Payment Successful!</div>
+      <div class="modal-message" id="modalMessage">Your credits have been added to your account.</div>
+      <button class="modal-btn modal-btn-primary" onclick="closeModal()">Continue</button>
+    </div>
+  </div>
+  
   <script>
     // Credit packs configuration
     const creditPacks = {
@@ -525,25 +584,16 @@
               const captureResult = await actions.order.capture();
               console.log('PayPal capture result:', captureResult);
               
-              // Show success message
-              const successEl = document.getElementById(`success-${packId}`);
-              successEl.textContent = `✅ Payment successful! ${pack.credits} credits will be added to your account.`;
-              successEl.classList.add('show');
-              
-              // Hide after 8 seconds
-              setTimeout(() => {
-                successEl.classList.remove('show');
-              }, 8000);
+              // Show success modal
+              showModal(
+                '✅',
+                'Payment Successful!',
+                `${pack.credits} credits will be added to your account shortly.`
+              );
               
             } catch (error) {
               console.error('Payment capture error:', error);
-              const errorEl = document.getElementById(`error-${packId}`);
-              errorEl.textContent = 'Payment failed. Please try again or contact support.';
-              errorEl.classList.add('show');
-              
-              setTimeout(() => {
-                errorEl.classList.remove('show');
-              }, 8000);
+              showModal('❌', 'Payment Failed', 'There was an issue processing your payment. Please try again.');
             }
           },
           
@@ -572,11 +622,31 @@
       const paymentStatus = urlParams.get('payment');
       
       if (paymentStatus === 'success') {
-        console.log('Payment successful!');
+        showModal('✅', 'Payment Successful!', 'Your credits have been added to your account.');
       } else if (paymentStatus === 'cancelled') {
-        console.log('Payment cancelled');
+        showModal('ℹ️', 'Payment Cancelled', 'No charges were made to your account.');
       }
     }
+    
+    // Show modal with custom content
+    function showModal(icon, title, message) {
+      document.getElementById('modalIcon').textContent = icon;
+      document.getElementById('modalTitle').textContent = title;
+      document.getElementById('modalMessage').textContent = message;
+      document.getElementById('modalOverlay').classList.add('show');
+    }
+    
+    // Close modal
+    function closeModal() {
+      document.getElementById('modalOverlay').classList.remove('show');
+    }
+    
+    // Close modal on overlay click
+    document.getElementById('modalOverlay').addEventListener('click', function(e) {
+      if (e.target === this) {
+        closeModal();
+      }
+    });
     
     // Initialize on load
     document.addEventListener('DOMContentLoaded', function() {
