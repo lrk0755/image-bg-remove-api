@@ -13,14 +13,13 @@ const CREDIT_PACKS = {
   power: { credits: 100, price: 15.00, name: 'Power Pack', type: 'credits' }
 };
 
-// Subscription plans
+// Subscription plans - with monthly credit limits
 const SUBSCRIPTION_PLANS = {
   monthly: {
     name: 'Monthly',
     price: 9.00,
     interval: 'month',
-    unlimited: true,
-    monthlyCredits: Infinity,
+    monthlyCredits: 100,  // 100 credits per month
     quality: 'high',
     historyDays: 30
   },
@@ -28,11 +27,11 @@ const SUBSCRIPTION_PLANS = {
     name: 'Yearly',
     price: 79.00,
     interval: 'year',
-    unlimited: true,
-    monthlyCredits: Infinity,
+    monthlyCredits: 200,  // 200 credits per month
     quality: 'premium',
     historyDays: 365,
-    trialDays: 7
+    trialDays: 7,
+    trialCredits: 200  // Trial credits
   }
 };
 
@@ -88,18 +87,51 @@ function checkQuota(userId, ip) {
   
   // Check subscription first
   if (user.subscription?.active) {
+    const planInfo = SUBSCRIPTION_PLANS[user.subscription.plan];
+    
+    // Check monthly reset
+    const now = new Date();
+    const lastReset = new Date(user.subscription.lastReset || now);
+    if (now.getMonth() !== lastReset.getMonth() || now.getFullYear() !== lastReset.getFullYear()) {
+      // Reset monthly credits
+      user.subscription.monthlyCreditsUsed = 0;
+      user.subscription.lastReset = now.toISOString();
+    }
+    
+    const monthlyUsed = user.subscription.monthlyCreditsUsed || 0;
+    const monthlyLimit = planInfo.monthlyCredits;
+    const remaining = monthlyLimit - monthlyUsed;
+    
+    if (remaining <= 0) {
+      return {
+        allowed: false,
+        watermark: false,
+        remaining: 0,
+        code: 'MONTHLY_QUOTA_EXCEEDED',
+        message: `Monthly quota exhausted (${monthlyLimit} credits). Resets next month or upgrade!`,
+        requiresSignup: false,
+        requiresPurchase: true,
+        guest: false,
+        plan: 'subscription',
+        subscription: user.subscription,
+        monthlyLimit,
+        monthlyUsed
+      };
+    }
+    
     return {
       allowed: true,
       watermark: false,
-      remaining: Infinity,
-      unlimited: true,
+      remaining,
       code: null,
-      message: `${user.subscription.plan} - Unlimited uses`,
+      message: `${user.subscription.planName} - ${remaining}/${monthlyLimit} credits this month`,
       requiresSignup: false,
       requiresPurchase: false,
       guest: false,
       plan: 'subscription',
-      subscription: user.subscription
+      subscription: user.subscription,
+      monthlyLimit,
+      monthlyUsed
     };
   }
   
@@ -135,7 +167,20 @@ function trackGuestUsage(ip) {
 
 function deductCredit(userId) {
   const user = users.get(userId);
-  if (user && !user.subscription?.active && user.credits > 0) {
+  if (!user) return;
+  
+  if (user.subscription?.active) {
+    // Deduct from subscription monthly credits
+    user.subscription.monthlyCreditsUsed = (user.subscription.monthlyCreditsUsed || 0) + 1;
+    user.totalUsed = (user.totalUsed || 0) + 1;
+    
+    usageLogs.push({
+      type: 'subscription',
+      userId,
+      timestamp: new Date().toISOString()
+    });
+  } else if (user.credits > 0) {
+    // Deduct from pay-as-you-go credits
     user.credits -= 1;
     user.totalUsed = (user.totalUsed || 0) + 1;
     
@@ -320,7 +365,10 @@ router.post('/purchase/subscription', (req, res) => {
       active: true,
       trial: true,
       trialEndsAt: expiresAt.toISOString(),
-      renewsAt: new Date(expiresAt.getTime() + 365 * 24 * 60 * 60 * 1000).toISOString()
+      renewsAt: new Date(expiresAt.getTime() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+      monthlyCreditsUsed: 0,
+      lastReset: now.toISOString(),
+      monthlyCredits: planInfo.monthlyCredits
     };
   } else {
     expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
@@ -329,7 +377,10 @@ router.post('/purchase/subscription', (req, res) => {
       planName: planInfo.name,
       active: true,
       trial: false,
-      renewsAt: expiresAt.toISOString()
+      renewsAt: expiresAt.toISOString(),
+      monthlyCreditsUsed: 0,
+      lastReset: now.toISOString(),
+      monthlyCredits: planInfo.monthlyCredits
     };
   }
   
