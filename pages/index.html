@@ -490,9 +490,9 @@
             document.getElementById('userAvatar').src = user.photoURL;
           }
           
-          // Hide signup CTA, show quota bar
+          // Hide signup CTA, hide quota bar for logged in users
           document.getElementById('signupCta').classList.remove('show');
-          document.getElementById('quotaBar').style.display = 'flex';
+          document.getElementById('quotaBar').style.display = 'none';
           
           // Hide "How it works" section for logged in users
           document.querySelector('.how-it-works')?.classList.add('hidden');
