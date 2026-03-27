@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pricing - AI Background Remover</title>
+  <script src="https://www.paypal.com/sdk/js?client-id=AWXT8wDvCx3g08C4Ovk4ZEmkLFoSpcgvTyMVZqMp2RURFwvJiGcw3Er5cXTChwvDKtYMZYzbiJPfIhdI&currency=USD" data-sdk-integration-source="button-factory"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     
@@ -177,45 +178,47 @@
     
     .feature-icon.yes { background: #d1fae5; color: #10b981; }
     
-    .btn {
-      display: block;
-      width: 100%;
-      padding: 16px;
-      border-radius: 12px;
-      font-size: 16px;
+    /* PayPal Button Container */
+    .paypal-btn-container {
+      min-height: 44px;
+      margin-top: 10px;
+    }
+    
+    /* Loading state */
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid #f3f3f3;
+      border-top: 2px solid var(--primary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    
+    /* Success Message */
+    .success-message {
+      display: none;
+      background: #d1fae5;
+      color: #059669;
+      padding: 15px;
+      border-radius: 10px;
+      margin-top: 15px;
       font-weight: 600;
-      text-decoration: none;
-      cursor: pointer;
-      border: none;
-      transition: all 0.3s;
     }
+    .success-message.show { display: block; }
     
-    .btn-primary {
-      background: linear-gradient(135deg, var(--primary), var(--secondary));
-      color: white;
+    /* Error Message */
+    .error-message {
+      display: none;
+      background: #fee2e2;
+      color: #dc2626;
+      padding: 15px;
+      border-radius: 10px;
+      margin-top: 15px;
+      font-weight: 600;
     }
-    
-    .btn-primary:hover {
-      transform: scale(1.02);
-      box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
-    }
-    
-    .btn-outline {
-      background: transparent;
-      border: 2px solid var(--primary);
-      color: var(--primary);
-    }
-    
-    .btn-outline:hover {
-      background: var(--primary);
-      color: white;
-    }
-    
-    /* Section divider */
-    .divider {
-      border-top: 2px dashed rgba(255,255,255,0.3);
-      margin: 60px 0;
-    }
+    .error-message.show { display: block; }
     
     /* Comparison Table */
     .comparison {
@@ -298,6 +301,7 @@
 </head>
 <body>
   <div class="container">
+
     <h1>Simple, Flexible Pricing</h1>
     <p class="subtitle">Choose what works best for you</p>
     
@@ -324,7 +328,9 @@
           <div class="feature"><span class="feature-icon yes">✓</span> Credits never expire</div>
           <div class="feature"><span class="feature-icon yes">✓</span> 30-day history</div>
         </div>
-        <button class="btn btn-outline" onclick="buyCredits(10, 3)">Buy $3</button>
+        <div class="paypal-btn-container" id="paypal-btn-starter"></div>
+        <div class="success-message" id="success-starter"></div>
+        <div class="error-message" id="error-starter"></div>
       </div>
       
       <div class="plan-card popular">
@@ -345,7 +351,9 @@
           <div class="feature"><span class="feature-icon yes">✓</span> 60-day history</div>
           <div class="feature"><span class="feature-icon yes">✓</span> Priority support</div>
         </div>
-        <button class="btn btn-primary" onclick="buyCredits(30, 6)">Buy $6</button>
+        <div class="paypal-btn-container" id="paypal-btn-popular"></div>
+        <div class="success-message" id="success-popular"></div>
+        <div class="error-message" id="error-popular"></div>
       </div>
       
       <div class="plan-card">
@@ -365,13 +373,13 @@
           <div class="feature"><span class="feature-icon yes">✓</span> 1-year history</div>
           <div class="feature"><span class="feature-icon yes">✓</span> VIP support</div>
         </div>
-        <button class="btn btn-primary" onclick="buyCredits(100, 15)">Buy $15</button>
+        <div class="paypal-btn-container" id="paypal-btn-power"></div>
+        <div class="success-message" id="success-power"></div>
+        <div class="error-message" id="error-power"></div>
       </div>
     </div>
     
     <div class="divider"></div>
-    
-
     
     <!-- Comparison Table -->
     <div class="comparison">
@@ -441,21 +449,122 @@
       
       <div class="faq-item">
         <div class="faq-question">Q: What payment methods do you accept?</div>
-        <div class="faq-answer">We accept all major credit cards (Visa, Mastercard, Amex), PayPal, Apple Pay, and Google Pay.</div>
+        <div class="faq-answer">We accept PayPal, all major credit cards (Visa, Mastercard, Amex), Apple Pay, and Google Pay.</div>
       </div>
     </div>
   </div>
   
   <script>
-    function buyCredits(amount, price) {
-      // Demo mode - in production, redirect to Stripe
-      alert(`Demo: Buying ${amount} credits for $${price}\n\nIn production, this would redirect to Stripe checkout.`);
+    // Credit packs configuration
+    const creditPacks = {
+      starter: { credits: 10, price: 3.00 },
+      popular: { credits: 30, price: 6.00 },
+      power: { credits: 100, price: 15.00 }
+    };
+    
+    // Get user ID from localStorage (set by Firebase auth)
+    function getUserId() {
+      return localStorage.getItem('userId') || null;
     }
     
-    function subscribe(plan) {
-      const prices = { monthly: '$9/month', yearly: '$79/year' };
-      alert(`Demo: Subscribing to ${plan} (${prices[plan]})\n\nIn production, this would redirect to Stripe checkout.`);
+    // Initialize PayPal buttons
+    function initPayPalButtons() {
+      Object.keys(creditPacks).forEach(packId => {
+        const pack = creditPacks[packId];
+        
+        paypal.Buttons({
+          style: {
+            layout: 'vertical',
+            color: 'blue',
+            shape: 'rect',
+            label: 'paypal'
+          },
+          
+          createOrder: function(data, actions) {
+            // This function is called when user clicks PayPal button
+            return actions.order.create({
+              purchase_units: [{
+                description: `${packId.charAt(0).toUpperCase() + packId.slice(1)} Pack - ${pack.credits} credits`,
+                amount: {
+                  value: pack.price.toFixed(2)
+                }
+              }],
+              application_context: {
+                brand_name: 'AI Background Remover',
+                user_action: 'PAY_NOW'
+              }
+            });
+          },
+          
+          onApprove: async function(data, actions) {
+            // This function is called after successful PayPal payment
+            try {
+              // Capture the order
+              const captureResult = await actions.order.capture();
+              
+              console.log('PayPal capture result:', captureResult);
+              
+              // Show success message
+              const successEl = document.getElementById(`success-${packId}`);
+              successEl.textContent = `✅ Payment successful! ${pack.credits} credits added to your account.`;
+              successEl.classList.add('show');
+              
+              // Hide after 5 seconds
+              setTimeout(() => {
+                successEl.classList.remove('show');
+              }, 5000);
+              
+              // In production, you would call your backend to credit the user
+              // await fetch('/api/user/credit', {
+              //   method: 'POST',
+              //   headers: { 'Content-Type': 'application/json' },
+              //   body: JSON.stringify({
+              //     userId: getUserId(),
+              //     credits: pack.credits,
+              //     orderId: captureResult.id
+              //   })
+              // });
+              
+            } catch (error) {
+              console.error('Payment capture error:', error);
+              const errorEl = document.getElementById(`error-${packId}`);
+              errorEl.textContent = 'Payment failed. Please try again.';
+              errorEl.classList.add('show');
+            }
+          },
+          
+          onError: function(err) {
+            console.error('PayPal error:', err);
+            const errorEl = document.getElementById(`error-${packId}`);
+            errorEl.textContent = 'Payment error. Please try again.';
+            errorEl.classList.add('show');
+          },
+          
+          onCancel: function(data) {
+            console.log('Payment cancelled:', data);
+          }
+        }).render(`#paypal-btn-${packId}`);
+      });
     }
+    
+    // Check URL params for payment result
+    function checkPaymentResult() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const paymentStatus = urlParams.get('payment');
+      
+      if (paymentStatus === 'success') {
+        // Could show a global success message here
+        console.log('Payment successful!');
+      } else if (paymentStatus === 'cancelled') {
+        console.log('Payment cancelled');
+      }
+    }
+    
+    // Initialize on load
+    document.addEventListener('DOMContentLoaded', function() {
+      checkPaymentResult();
+      initPayPalButtons();
+    });
   </script>
 </body>
 </html>
