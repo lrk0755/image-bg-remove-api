@@ -298,11 +298,13 @@
       
       <!-- Login button (shown when not logged in) -->
       <div id="loginBtn" class="login-btn" style="display: none;">
+        <a href="/pricing" class="nav-btn nav-btn-secondary">Price</a>
         <button onclick="signInWithGoogle()">Sign in</button>
       </div>
       
       <!-- User area (shown when logged in) -->
       <div id="userArea" class="user-info" style="display: none;">
+        <span class="credits-badge" id="creditsBadge" style="background: rgba(255,255,255,0.2); padding: 4px 10px; border-radius: 12px; font-size: 12px; color: white;"></span>
         <span class="user-name" id="userName"></span>
         <img id="userAvatar" class="user-avatar" onclick="toggleUserMenu()">
         <div id="userMenu" class="user-menu">
@@ -427,7 +429,7 @@
     
     async function loadQuota() {
       try {
-        const resp = await fetch(API_BASE + '/api/user/quota', { credentials: 'include' });
+        const resp = await fetch(API_BASE + '/api/quota', { credentials: 'include' });
         currentQuota = await resp.json();
         updateQuotaUI();
       } catch (e) {
@@ -470,6 +472,15 @@
       if (!currentQuota.guest) {
         document.getElementById('quotaBar').style.display = 'flex';
       }
+      
+      // Update credits badge for logged in users
+      const creditsBadge = document.getElementById('creditsBadge');
+      if (currentQuota && !currentQuota.guest) {
+        creditsBadge.textContent = `${currentQuota.remaining} credits`;
+        creditsBadge.style.display = 'inline';
+      } else {
+        creditsBadge.style.display = 'none';
+      }
     }
     
     async function checkQuotaBeforeProcess() {
@@ -493,6 +504,7 @@
           // Hide signup CTA, hide quota bar for logged in users
           document.getElementById('signupCta').classList.remove('show');
           document.getElementById('quotaBar').style.display = 'none';
+          document.getElementById('creditsBadge').textContent = '0 credits';
           
           // Hide "How it works" section for logged in users
           document.querySelector('.how-it-works')?.classList.add('hidden');

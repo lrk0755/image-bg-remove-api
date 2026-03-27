@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>My Account - AI Background Remover</title>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     :root {
@@ -29,6 +31,18 @@
       align-items: center;
     }
     .logo { font-size: 20px; font-weight: 700; }
+    .nav-links { display: flex; gap: 15px; }
+    .nav-link {
+      color: white;
+      text-decoration: none;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 500;
+      background: rgba(255,255,255,0.2);
+      transition: background 0.2s;
+    }
+    .nav-link:hover { background: rgba(255,255,255,0.3); }
     .user-info { display: flex; align-items: center; gap: 15px; }
     .avatar { width: 44px; height: 44px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.3); }
     .user-name { font-weight: 600; }
@@ -77,12 +91,16 @@
   <div class="header">
     <div class="header-content">
       <div class="logo">AI Background Remover</div>
+      <div class="nav-links">
+        <a href="/" class="nav-link">Home</a>
+        <a href="/pricing" class="nav-link">Pricing</a>
+      </div>
       <div class="user-info">
         <div>
           <div class="user-name" id="userName">Loading...</div>
           <div class="user-email" id="userEmail"></div>
         </div>
-        <img class="avatar" id="userAvatar" src="" alt="">
+        <img class="avatar" id="userAvatar" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23999'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E" alt="">
       </div>
     </div>
   </div>
@@ -113,68 +131,81 @@
   </div>
   
   <script>
+    // Firebase configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyDzwv4aGmRzBA-t4tOsMF6JAwXmUAzJQ2g",
+      authDomain: "image-background-remove-cdc6d.firebaseapp.com",
+      projectId: "image-background-remove-cdc6d",
+      storageBucket: "image-background-remove-cdc6d.firebasestorage.app",
+      messagingSenderId: "155957397056",
+      appId: "1:155957397056:web:a227c9487b32a1c16ac1a5"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    
+    // Credit packs
+    const creditPacks = {
+      starter: { credits: 10, price: 3.00, name: 'Starter' },
+      popular: { credits: 30, price: 6.00, name: 'Popular' },
+      power: { credits: 100, price: 15.00, name: 'Power' }
+    };
+    
     async function loadUserData() {
-      try {
-        const resp = await fetch('/api/user/profile', { credentials: 'include' });
-        const data = await resp.json();
-        if (!data.authenticated) {
-          window.location.href = '/';
-          return;
-        }
-        const user = data.user;
-        document.getElementById('userName').textContent = user.name || 'User';
-        document.getElementById('userEmail').textContent = user.email || '';
-        document.getElementById('userEmail2').textContent = user.email || '-';
-        document.getElementById('creditsValue').textContent = user.credits || 0;
-        document.getElementById('totalUsed').textContent = user.totalUsed || 0;
-        if (user.createdAt) {
-          document.getElementById('memberSince').textContent = new Date(user.createdAt).toLocaleDateString();
-        }
-        if (user.avatar) document.getElementById('userAvatar').src = user.avatar;
-        loadPlans();
-      } catch (e) {
-        console.error('Failed:', e);
-      }
+      // Wait for Firebase auth state
+      return new Promise((resolve) => {
+        auth.onAuthStateChanged(async (user) => {
+          if (!user) {
+            // Not logged in, redirect to home
+            window.location.href = '/';
+            resolve();
+            return;
+          }
+          
+          // Update user info
+          document.getElementById('userName').textContent = user.displayName || user.email.split('@')[0];
+          document.getElementById('userEmail').textContent = user.email;
+          document.getElementById('userEmail2').textContent = user.email;
+          
+          if (user.photoURL) {
+            document.getElementById('userAvatar').src = user.photoURL;
+          }
+          
+          // Get quota from API
+          try {
+            const resp = await fetch('/api/quota?userId=' + user.uid);
+            const quota = await resp.json();
+            document.getElementById('creditsValue').textContent = quota.remaining || 0;
+          } catch (e) {
+            console.error('Failed to load quota:', e);
+            document.getElementById('creditsValue').textContent = '-';
+          }
+          
+          // Load plans
+          loadPlans();
+          resolve();
+        });
+      });
     }
     
-    async function loadPlans() {
-      try {
-        const resp = await fetch('/api/user/packs', { credentials: 'include' });
-        const data = await resp.json();
-        const grid = document.getElementById('plansGrid');
-        data.creditPacks.forEach(pack => {
-          const pricePer = (pack.price / pack.credits).toFixed(2);
-          grid.innerHTML += `
-            <div class="plan-item" onclick="buyCredits('${pack.id}')">
-              <div class="plan-name">${pack.name}</div>
-              <div class="plan-credits">${pack.credits}</div>
-              <div class="plan-price">$${pack.price.toFixed(2)}</div>
-              <div class="plan-per">$${pricePer}/credit</div>
-            </div>
-          `;
-        });
-      } catch (e) { console.error('Plans error:', e); }
+    function loadPlans() {
+      const grid = document.getElementById('plansGrid');
+      Object.entries(creditPacks).forEach(([id, pack]) => {
+        const pricePer = (pack.price / pack.credits).toFixed(2);
+        grid.innerHTML += `
+          <div class="plan-item" onclick="selectPack('${id}')">
+            <div class="plan-name">${pack.name}</div>
+            <div class="plan-credits">${pack.credits}</div>
+            <div class="plan-price">$${pack.price.toFixed(2)}</div>
+            <div class="plan-per">$${pricePer}/credit</div>
+          </div>
+        `;
+      });
     }
     
-    async function buyCredits(packId) {
-      if (!confirm('Demo mode: This would redirect to Stripe checkout.')) return;
-      try {
-        const resp = await fetch('/api/user/purchase/credits', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ pack: packId })
-        });
-        const result = await resp.json();
-        if (result.success) {
-          alert(`Success! You now have ${result.totalCredits} credits.`);
-          loadUserData();
-        } else {
-          alert('Error: ' + result.error);
-        }
-      } catch (e) {
-        alert('Purchase failed: ' + e.message);
-      }
+    function selectPack(packId) {
+      window.location.href = '/pricing?pack=' + packId;
     }
     
     loadUserData();
