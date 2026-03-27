@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pricing - AI Background Remover</title>
-  <script id="paypal-sdk" data-sdk-integration-source="button-factory"></script>
+  <script src="https://www.paypal.com/sdk/js?client-id=AWXT8wDvCx3g08C4Ovk4ZEmkLFoSpcgvTyMVZqMp2RURFwvJiGcw3Er5cXTChwvDKtYMZYzbiJPfIhdI&currency=USD" data-sdk-integration-source="button-factory"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     
@@ -462,39 +462,7 @@
       power: { credits: 100, price: 15.00 }
     };
     
-    let paypalLoaded = false;
-    
-    // Fetch config and initialize PayPal
-    async function init() {
-      try {
-        // Fetch public config
-        const configResp = await fetch('/api/config');
-        const config = await configResp.json();
-        
-        if (!config.paypalClientId) {
-          console.error('PayPal Client ID not configured');
-          return;
-        }
-        
-        // Dynamically load PayPal SDK
-        const script = document.getElementById('paypal-sdk');
-        script.src = `https://www.paypal.com/sdk/js?client-id=${config.paypalClientId}&currency=USD`;
-        script.onload = () => {
-          paypalLoaded = true;
-          initPayPalButtons();
-        };
-        
-      } catch (error) {
-        console.error('Failed to load config:', error);
-      }
-    }
-    
-    // Get user ID from localStorage (set by Firebase auth)
-    function getUserId() {
-      return localStorage.getItem('userId') || null;
-    }
-    
-    // Initialize PayPal buttons
+    // Initialize PayPal buttons when SDK is ready
     function initPayPalButtons() {
       if (typeof paypal === 'undefined') {
         console.error('PayPal SDK not loaded');
@@ -577,7 +545,14 @@
     // Initialize on load
     document.addEventListener('DOMContentLoaded', function() {
       checkPaymentResult();
-      init();
+      // PayPal SDK loads async, buttons init after SDK
+      if (typeof paypal !== 'undefined') {
+        initPayPalButtons();
+      } else {
+        window.addEventListener('load', function() {
+          setTimeout(initPayPalButtons, 500);
+        });
+      }
     });
   </script>
 </body>
