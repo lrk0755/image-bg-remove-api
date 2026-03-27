@@ -512,7 +512,7 @@
       <div class="modal-icon" id="modalIcon">✅</div>
       <div class="modal-title" id="modalTitle">Payment Successful!</div>
       <div class="modal-message" id="modalMessage">Your credits have been added to your account.</div>
-      <button class="modal-btn modal-btn-primary" onclick="closeModal()">Continue</button>
+      <button class="modal-btn modal-btn-primary" id="modalBtn" onclick="closeModal()">Continue</button>
     </div>
   </div>
   
@@ -544,6 +544,23 @@
     function getCurrentUserId() {
       const user = firebase.auth().currentUser;
       return user ? user.uid : null;
+    }
+    
+    // Sign in with Google
+    window.signInWithGoogle = function() {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      firebase.auth().signInWithPopup(provider).then((result) => {
+        console.log('Signed in:', result.user);
+        closeModal();
+      }).catch((error) => {
+        console.error('Sign in error:', error);
+        alert('Sign in failed: ' + error.message);
+      });
+    };
+    
+    // Close modal
+    function closeModal() {
+      document.getElementById('modalOverlay').classList.remove('show');
     }
     
     // Load PayPal SDK dynamically
@@ -589,7 +606,9 @@
               showModal(
                 '🔐',
                 'Please Sign In First',
-                'You need to sign in with Google before purchasing. Click below to sign in.'
+                'You need to sign in with Google before purchasing.',
+                'Sign In',
+                'signin'
               );
               return null; // Prevent PayPal dialog
             }
@@ -692,10 +711,17 @@
     }
     
     // Show modal with custom content
-    function showModal(icon, title, message) {
+    function showModal(icon, title, message, buttonText = 'Continue', buttonAction = 'close') {
       document.getElementById('modalIcon').textContent = icon;
       document.getElementById('modalTitle').textContent = title;
       document.getElementById('modalMessage').textContent = message;
+      const btn = document.getElementById('modalBtn');
+      btn.textContent = buttonText;
+      if (buttonAction === 'signin') {
+        btn.onclick = function() { signInWithGoogle(); };
+      } else {
+        btn.onclick = function() { closeModal(); };
+      }
       document.getElementById('modalOverlay').classList.add('show');
     }
     
