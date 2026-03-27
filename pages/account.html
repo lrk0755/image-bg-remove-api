@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Account - AI Background Remover</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --primary: #667eea;
+      --secondary: #764ba2;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f7fa;
+      min-height: 100vh;
+    }
+    .header {
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: white;
+      padding: 20px;
+    }
+    .header-content {
+      max-width: 1000px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .logo { font-size: 20px; font-weight: 700; }
+    .user-info { display: flex; align-items: center; gap: 15px; }
+    .avatar { width: 44px; height: 44px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.3); }
+    .user-name { font-weight: 600; }
+    .user-email { font-size: 12px; opacity: 0.8; }
+    .container { max-width: 1000px; margin: 30px auto; padding: 0 20px; }
+    .credits-banner {
+      background: white;
+      border-radius: 16px;
+      padding: 30px;
+      margin-bottom: 30px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    .credit-box { text-align: center; padding: 20px; background: #f8f9fa; border-radius: 12px; }
+    .credit-value { font-size: 42px; font-weight: 800; color: var(--primary); }
+    .credit-label { font-size: 14px; color: #666; margin-top: 5px; }
+    .credit-reset { font-size: 12px; color: #999; margin-top: 8px; }
+    .subscription-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-top: 8px;
+    }
+    .subscription-badge.active { background: #d1fae5; color: #059669; }
+    .card { background: white; border-radius: 16px; padding: 24px; margin-bottom: 20px; }
+    .card-title { font-size: 18px; font-weight: 700; color: #333; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+    .card-title .icon { font-size: 24px; }
+    .plans-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
+    .plan-item { border: 2px solid #eee; border-radius: 12px; padding: 20px; text-align: center; cursor: pointer; transition: all 0.3s; }
+    .plan-item:hover { border-color: var(--primary); }
+    .plan-item.current { border-color: var(--success); background: #f0fdf4; }
+    .plan-name { font-weight: 600; color: #333; margin-bottom: 8px; }
+    .plan-credits { font-size: 24px; font-weight: 700; color: var(--primary); }
+    .plan-price { font-size: 14px; color: #666; margin-top: 5px; }
+    .sub-info { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 20px; }
+    .sub-item { background: #f8f9fa; padding: 15px; border-radius: 8px; }
+    .sub-item .label { font-size: 12px; color: #666; margin-bottom: 5px; }
+    .sub-item .value { font-size: 16px; font-weight: 600; color: #333; }
+    .btn {
+      display: inline-block;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+      border: none;
+      transition: all 0.3s;
+    }
+    .btn-primary { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; }
+    .btn-outline { background: transparent; border: 2px solid var(--primary); color: var(--primary); }
+    .btn-danger { background: transparent; border: 2px solid var(--danger); color: var(--danger); }
+    .btn:hover { transform: scale(1.02); }
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.show { display: flex; }
+    .modal { background: white; border-radius: 20px; padding: 30px; max-width: 450px; width: 90%; }
+    .modal h3 { font-size: 20px; margin-bottom: 15px; }
+    .modal p { color: #666; margin-bottom: 20px; }
+    .modal .btn-row { display: flex; gap: 10px; justify-content: flex-end; }
+    @media (max-width: 768px) {
+      .credits-banner, .plans-grid, .sub-info { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-content">
+      <div class="logo">AI Background Remover</div>
+      <div class="user-info">
+        <div>
+          <div class="user-name" id="userName">Loading...</div>
+          <div class="user-email" id="userEmail"></div>
+        </div>
+        <img class="avatar" id="userAvatar" src="" alt="">
+      </div>
+    </div>
+  </div>
+  
+  <div class="container">
+    <div class="credits-banner">
+      <div class="credit-box">
+        <div class="credit-value" id="creditsValue">-</div>
+        <div class="credit-label">Available Credits</div>
+        <div class="credit-reset" id="creditsReset"></div>
+      </div>
+      <div class="credit-box">
+        <div class="credit-value" id="monthlyValue">-</div>
+        <div class="credit-label">This Month Used</div>
+        <div class="subscription-badge" id="subBadge">Loading...</div>
+      </div>
+    </div>
+    
+    <div class="card">
+      <div class="card-title"><span class="icon">📦</span> My Plan</div>
+      <div id="currentPlanInfo">
+        <p style="color: #666; margin-bottom: 15px;">Loading...</p>
+      </div>
+    </div>
+    
+    <div class="card" id="subscriptionCard">
+      <div class="card-title"><span class="icon">💳</span> Buy Credits</div>
+      <div class="plans-grid" id="plansGrid"></div>
+    </div>
+    
+    <div class="card" id="cancelCard" style="display: none;">
+      <div class="card-title"><span class="icon">⚠️</span> Subscription</div>
+      <p style="color: #666; margin-bottom: 15px;">Your subscription will remain active until the end of your billing period.</p>
+      <button class="btn btn-danger" onclick="cancelSubscription()">Cancel Subscription</button>
+    </div>
+  </div>
+  
+  <div class="modal-overlay" id="cancelModal">
+    <div class="modal">
+      <h3>Cancel Subscription?</h3>
+      <p>Are you sure? You'll lose access at the end of your billing period.</p>
+      <div class="btn-row">
+        <button class="btn btn-outline" onclick="closeCancelModal()">Keep</button>
+        <button class="btn btn-danger" onclick="confirmCancel()">Yes, Cancel</button>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    async function loadUserData() {
+      try {
+        const resp = await fetch('/api/user/profile', { credentials: 'include' });
+        const data = await resp.json();
+        if (!data.authenticated) {
+          window.location.href = '/?login=required';
+          return;
+        }
+        const user = data.user;
+        document.getElementById('userName').textContent = user.name || 'User';
+        document.getElementById('userEmail').textContent = user.email || '';
+        if (user.avatar) document.getElementById('userAvatar').src = user.avatar;
+        loadQuota();
+        loadPlans();
+      } catch (e) {
+        console.error('Failed:', e);
+      }
+    }
+    
+    async function loadQuota() {
+      try {
+        const resp = await fetch('/api/user/quota', { credentials: 'include' });
+        const quota = await resp.json();
+        document.getElementById('creditsValue').textContent = quota.remaining === Infinity ? '∞' : quota.remaining;
+        if (quota.subscription) {
+          document.getElementById('monthlyValue').textContent = (quota.monthlyUsed || 0) + '/' + (quota.monthlyLimit || 0);
+          document.getElementById('subBadge').textContent = quota.subscription.planName || 'Active';
+          document.getElementById('subBadge').className = 'subscription-badge active';
+          document.getElementById('currentPlanInfo').innerHTML = `
+            <div class="sub-info">
+              <div class="sub-item"><div class="label">Plan</div><div class="value">${quota.subscription.planName}</div></div>
+              <div class="sub-item"><div class="label">Credits Used</div><div class="value">${quota.monthlyUsed || 0}/${quota.monthlyLimit || 0}</div></div>
+            </div>
+            <p style="color: #666;">Renews: ${quota.subscription.renewsAt ? new Date(quota.subscription.renewsAt).toLocaleDateString() : '-'}</p>
+          `;
+          document.getElementById('cancelCard').style.display = 'block';
+        } else {
+          document.getElementById('monthlyValue').textContent = '-';
+          document.getElementById('subBadge').textContent = 'Free';
+          document.getElementById('subBadge').className = 'subscription-badge';
+          document.getElementById('currentPlanInfo').innerHTML = `<p style="color: #666;">${quota.remaining} permanent credits remaining.</p>`;
+          document.getElementById('cancelCard').style.display = 'none';
+        }
+      } catch (e) { console.error('Quota error:', e); }
+    }
+    
+    async function loadPlans() {
+      try {
+        const resp = await fetch('/api/user/packs', { credentials: 'include' });
+        const data = await resp.json();
+        const grid = document.getElementById('plansGrid');
+        data.creditPacks.forEach(pack => {
+          grid.innerHTML += `
+            <div class="plan-item" onclick="buyCredits('${pack.id}')">
+              <div class="plan-name">${pack.name}</div>
+              <div class="plan-credits">${pack.credits}</div>
+              <div class="plan-price">$${pack.price.toFixed(2)}</div>
+            </div>
+          `;
+        });
+      } catch (e) { console.error('Plans error:', e); }
+    }
+    
+    async function buyCredits(packId) {
+      alert('Demo: Would redirect to Stripe checkout for ' + packId);
+    }
+    
+    function cancelSubscription() {
+      document.getElementById('cancelModal').classList.add('show');
+    }
+    
+    function closeCancelModal() {
+      document.getElementById('cancelModal').classList.remove('show');
+    }
+    
+    async function confirmCancel() {
+      closeCancelModal();
+      alert('Demo: Would cancel subscription');
+    }
+    
+    loadUserData();
+  </script>
+</body>
+</html>
