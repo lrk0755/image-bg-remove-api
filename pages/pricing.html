@@ -600,9 +600,8 @@
           },
           
           createOrder: function(data, actions) {
-            const userId = getCurrentUserId();
-            if (!userId) {
-              // Not logged in - show message and redirect to sign in
+            const user = firebase.auth().currentUser;
+            if (!user) {
               showModal(
                 '🔐',
                 'Please Sign In First',
@@ -610,7 +609,18 @@
                 'Sign In',
                 'signin'
               );
-              return null; // Prevent PayPal dialog
+              return null;
+            }
+            const userId = user.uid;
+            if (!userId) {
+              showModal(
+                '❌',
+                'Authentication Error',
+                'Could not get user ID. Please sign out and sign in again.',
+                'OK',
+                'close'
+              );
+              return null;
             }
             return actions.order.create({
               purchase_units: [{
@@ -635,14 +645,8 @@
             try {
               console.log('Order approved, capturing...', data);
               
-              // Capture the payment
-              const captureResult = await actions.order.capture();
-              console.log('PayPal capture result:', captureResult);
-              
-              // Get user ID and add credits via API
-              const userId = getCurrentUserId();
-              if (!userId) {
-                // Not logged in - show message to sign in first
+              const user = firebase.auth().currentUser;
+              if (!user || !user.uid) {
                 showModal(
                   'ℹ️',
                   'Please Sign In First',
@@ -651,17 +655,25 @@
                 return;
               }
               
+              // Capture the payment
+              const captureResult = await actions.order.capture();
+              console.log('PayPal capture result:', captureResult);
+              
               // Call backend to add credits
               const addCreditsResp = await fetch('/api/add-credits', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                  userId: userId,
+                  userId: user.uid,
                   credits: pack.credits,
                   orderId: captureResult.id,
                   packId: packId
                 })
               });
+              
+              if (!addCreditsResp.ok) {
+                throw new Error('Failed to add credits');
+              }
               
               const addCreditsResult = await addCreditsResp.json();
               console.log('Add credits result:', addCreditsResult);
