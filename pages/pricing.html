@@ -572,10 +572,10 @@
         console.log('PayPal SDK loaded successfully');
         initPayPalButtons();
       };
-      script.onerror = function() {
-        console.error('Failed to load PayPal SDK');
+      script.onerror = function(e) {
+        console.error('Failed to load PayPal SDK:', e);
         document.querySelectorAll('.paypal-btn-container').forEach(el => {
-          el.innerHTML = '<p style="color: red;">Failed to load payment options. Please disable ad blocker.</p>';
+          el.innerHTML = '<p style="color: red; font-size: 12px;">Failed to load PayPal SDK. Please check:<br>1. Disable ad blocker<br>2. Check internet connection<br>3. Try refreshing the page</p>';
         });
       };
       document.head.appendChild(script);
