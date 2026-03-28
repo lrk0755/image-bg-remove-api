@@ -525,7 +525,7 @@
     };
     
     // PayPal Client ID - using the provided ID
-    const PAYPAL_CLIENT_ID = 'AYh9VPsYexQM6F5KpnSCiDLOUozZMRUnSnn8LfRNyJ1NpU0CJRU0Zgh7jQqNf-ZO-VnTlIsHZ0mPOzeb';
+    const PAYPAL_CLIENT_ID = 'AWXT8wDvCx3g08C4Ovk4ZEmkLFoSpcgvTyMVZqMp2RURFwvJiGcw3Er5cXTChwvDKtYMZYzbiJPfIhdI';
     
     // Firebase configuration
     const firebaseConfig = {
@@ -566,7 +566,7 @@
     // Load PayPal SDK dynamically
     function loadPayPalSDK() {
       const script = document.createElement('script');
-      script.src = `https://www.paypal.com/sdk/js?client-id=${PAYPAL_CLIENT_ID}&currency=USD&sandbox=true`;
+      script.src = `https://www.paypal.com/sdk/js?client-id=${PAYPAL_CLIENT_ID}&currency=USD`;
       script.async = true;
       script.onload = function() {
         console.log('PayPal SDK loaded successfully');
