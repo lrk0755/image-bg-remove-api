@@ -566,7 +566,7 @@
     // Load PayPal SDK dynamically
     function loadPayPalSDK() {
       const script = document.createElement('script');
-      script.src = `https://www.paypal.com/sdk/js?client-id=${PAYPAL_CLIENT_ID}&currency=USD`;
+      script.src = `https://www.paypal.com/sdk/js?client-id=${PAYPAL_CLIENT_ID}&currency=USD&sandbox=true`;
       script.async = true;
       script.onload = function() {
         console.log('PayPal SDK loaded successfully');
