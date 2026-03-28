@@ -563,6 +563,21 @@
       document.getElementById('modalOverlay').classList.remove('show');
     }
     
+    // Auth state flag - wait for Firebase Auth to fully initialize
+    let firebaseAuthReady = false;
+    let currentUserId = null;
+    
+    // Listen for auth state changes
+    firebase.auth().onAuthStateChanged(function(user) {
+      if (user) {
+        currentUserId = user.uid;
+        console.log('User signed in:', user.uid);
+      } else {
+        currentUserId = null;
+        console.log('User signed out');
+      }
+    });
+    
     // Load PayPal SDK dynamically
     function loadPayPalSDK() {
       const script = document.createElement('script');
@@ -570,7 +585,22 @@
       script.async = true;
       script.onload = function() {
         console.log('PayPal SDK loaded successfully');
-        initPayPalButtons();
+        // Wait for Firebase Auth to be ready before initializing PayPal
+        if (firebase.auth().currentUser) {
+          firebaseAuthReady = true;
+          currentUserId = firebase.auth().currentUser.uid;
+          initPayPalButtons();
+        } else {
+          // Wait for auth state to initialize
+          const unsubscribe = firebase.auth().onAuthStateChanged(function(user) {
+            firebaseAuthReady = true;
+            if (user) {
+              currentUserId = user.uid;
+            }
+            initPayPalButtons();
+            unsubscribe(); // Stop listening after first state
+          });
+        }
       };
       script.onerror = function(e) {
         console.error('Failed to load PayPal SDK:', e);
@@ -588,6 +618,9 @@
         return;
       }
       
+      // Use currentUserId from auth state
+      const userId = currentUserId || (firebase.auth().currentUser ? firebase.auth().currentUser.uid : null);
+      
       Object.keys(creditPacks).forEach(packId => {
         const pack = creditPacks[packId];
         
@@ -601,6 +634,7 @@
           
           createOrder: function(data, actions) {
             const user = firebase.auth().currentUser;
+            console.log('createOrder called, currentUser:', user);
             if (!user) {
               showModal(
                 '🔐',
@@ -622,6 +656,7 @@
               );
               return null;
             }
+            console.log('Creating order for user:', userId);
             return actions.order.create({
               purchase_units: [{
                 description: `${packId.charAt(0).toUpperCase() + packId.slice(1)} Pack - ${pack.credits} credits`,
@@ -646,6 +681,7 @@
               console.log('Order approved, capturing...', data);
               
               const user = firebase.auth().currentUser;
+              console.log('onApprove user:', user);
               if (!user || !user.uid) {
                 showModal(
                   'ℹ️',
