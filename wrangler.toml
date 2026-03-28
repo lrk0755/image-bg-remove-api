@@ -1,0 +1,13 @@
+name = "image-bg-remove-api"
+compatibility_date = "2024-01-01"
+
+[vars]
+REMOVE_BG_API_KEY = "1teo3E5gQ5Rk82dN7CCXFZ1G"
+
+[assets]
+directory = "./static"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "image-bg-remove-db"
+database_id = "e3acf49c-8547-428e-841d-55cced1aae52"
