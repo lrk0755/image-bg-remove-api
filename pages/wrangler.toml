@@ -11,6 +11,3 @@ directory = "./static"
 binding = "DB"
 database_name = "image-bg-remove-db"
 database_id = "e3acf49c-8547-428e-841d-55cced1aae52"
-
-[functions]
-directory = "./_functions"
