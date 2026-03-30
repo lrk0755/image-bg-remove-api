@@ -696,67 +696,83 @@
           },
           
           onApprove: async function(data, actions) {
+            let orderId = data.orderID;
+            let captureStatus = null;
+            
             try {
               console.log('Order approved, capturing...', data);
               
               const user = firebase.auth().currentUser;
-              console.log('onApprove user:', user);
               if (!user || !user.uid) {
-                showModal(
-                  'ℹ️',
-                  'Please Sign In First',
-                  'You need to sign in with Google before purchasing credits. Click Continue to sign in.'
-                );
+                showModal('ℹ️', 'Please Sign In First', 'You need to sign in with Google before purchasing credits. Click Continue to sign in.');
                 return;
               }
               
-              // Capture the payment
-              const captureResult = await actions.order.capture();
-              console.log('PayPal capture result:', captureResult);
+              // Step 1: Capture the payment via PayPal SDK
+              try {
+                const captureResult = await actions.order.capture();
+                console.log('PayPal capture result:', captureResult);
+                orderId = captureResult.id;
+                captureStatus = captureResult.status;
+              } catch (captureErr) {
+                // Capture failed via SDK — but payment MAY have gone through.
+                // Fall through to server-side verification.
+                console.warn('SDK capture failed, will verify with API:', captureErr);
+              }
               
-              // Call backend to add credits
+              // Step 2: Call backend to add credits (idempotent — safe to retry)
               const addCreditsResp = await fetch('/api/add-credits', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                   userId: user.uid,
                   credits: pack.credits,
-                  orderId: captureResult.id,
-                  packId: packId
+                  orderId: orderId,
+                  packId: packId,
+                  amount: pack.price
                 })
               });
               
-              if (!addCreditsResp.ok) {
-                throw new Error('Failed to add credits');
+              const result = await addCreditsResp.json();
+              console.log('Add credits result:', result);
+              
+              if (result.success) {
+                showModal(
+                  '✅',
+                  'Payment Successful!',
+                  `${result.creditsAdded} credits have been added to your account!`,
+                  'Go to My Account →',
+                  'account'
+                );
+              } else {
+                // API returned error — show the actual message
+                console.error('Add credits API error:', result);
+                showModal(
+                  '⚠️',
+                  'Credits Not Added',
+                  result.message || 'There was an issue adding credits to your account. Your payment has been received. Please contact support with your Order ID: ' + orderId
+                );
               }
               
-              const addCreditsResult = await addCreditsResp.json();
-              console.log('Add credits result:', addCreditsResult);
-              
-              // Show success modal, Continue button redirects to account page
-              showModal(
-                '✅',
-                'Payment Successful!',
-                `${pack.credits} credits have been added to your account!`,
-                'Go to My Account →',
-                'account'
-              );
-              
             } catch (error) {
-              console.error('Payment capture error:', error);
-              showModal('❌', 'Payment Failed', 'There was an issue processing your payment. Please try again.');
+              console.error('Payment processing error:', error);
+              // Show detailed error with order ID for support
+              const errorMsg = error.message || 'Unknown error';
+              showModal(
+                '❌',
+                'Payment Failed',
+                `Error: ${errorMsg}${orderId ? '\n\nOrder ID: ' + orderId : ''}\n\nYour payment may have been charged. Please contact support with your PayPal transaction ID.`
+              );
             }
           },
           
           onError: function(err) {
-            console.error('PayPal error:', err);
-            const errorEl = document.getElementById(`error-${packId}`);
-            errorEl.textContent = 'Payment error. Please try again or use a different payment method.';
-            errorEl.classList.add('show');
-            
-            setTimeout(() => {
-              errorEl.classList.remove('show');
-            }, 8000);
+            console.error('PayPal onError:', err);
+            // Don't show generic "Payment error" — could be user cancelled or network issue
+            const isUserAction = err && (err.message || '').toLowerCase().includes('popup');
+            if (!isUserAction) {
+              showModal('❌', 'Payment Error', 'A PayPal error occurred. Please try again or use a different payment method.');
+            }
           },
           
           onCancel: function(data) {
