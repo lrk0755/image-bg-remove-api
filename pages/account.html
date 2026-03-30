@@ -12,26 +12,29 @@
       --primary: #667eea;
       --secondary: #764ba2;
       --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
     }
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #f5f7fa;
+      background: #f0f2f8;
       min-height: 100vh;
     }
     .header {
       background: linear-gradient(135deg, var(--primary), var(--secondary));
       color: white;
-      padding: 20px;
+      padding: 20px 0;
     }
     .header-content {
-      max-width: 1000px;
+      max-width: 960px;
       margin: 0 auto;
+      padding: 0 20px;
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
     .logo { font-size: 20px; font-weight: 700; }
-    .nav-links { display: flex; gap: 15px; }
+    .nav-links { display: flex; gap: 10px; }
     .nav-link {
       color: white;
       text-decoration: none;
@@ -43,54 +46,141 @@
       transition: background 0.2s;
     }
     .nav-link:hover { background: rgba(255,255,255,0.3); }
-    .user-info { display: flex; align-items: center; gap: 15px; }
-    .avatar { width: 44px; height: 44px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.3); }
-    .user-name { font-weight: 600; }
+    .user-info { display: flex; align-items: center; gap: 12px; }
+    .avatar { width: 44px; height: 44px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.4); }
+    .user-name { font-weight: 600; font-size: 14px; }
     .user-email { font-size: 12px; opacity: 0.8; }
-    .container { max-width: 1000px; margin: 30px auto; padding: 0 20px; }
+    .container { max-width: 960px; margin: 30px auto; padding: 0 20px; }
+
+    /* Credits Banner */
     .credits-banner {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      border-radius: 20px;
+      padding: 40px;
+      text-align: center;
+      color: white;
+      margin-bottom: 30px;
+      box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+    }
+    .credit-value { font-size: 72px; font-weight: 800; line-height: 1; }
+    .credit-label { font-size: 16px; opacity: 0.9; margin-top: 8px; }
+    .credit-hint { font-size: 13px; opacity: 0.7; margin-top: 6px; }
+
+    /* Stats Row */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 15px;
+      margin-bottom: 30px;
+    }
+    .stat-card {
       background: white;
       border-radius: 16px;
-      padding: 30px;
-      margin-bottom: 30px;
+      padding: 20px;
       text-align: center;
     }
-    .credit-value { font-size: 56px; font-weight: 800; color: var(--primary); }
-    .credit-label { font-size: 16px; color: #666; margin-top: 10px; }
+    .stat-value { font-size: 24px; font-weight: 700; color: var(--primary); }
+    .stat-label { font-size: 12px; color: #888; margin-top: 4px; }
+
+    /* Cards */
     .card { background: white; border-radius: 16px; padding: 24px; margin-bottom: 20px; }
-    .card-title { font-size: 18px; font-weight: 700; color: #333; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
-    .card-title .icon { font-size: 24px; }
-    .plans-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
-    .plan-item { border: 2px solid #eee; border-radius: 12px; padding: 25px 20px; text-align: center; cursor: pointer; transition: all 0.3s; }
-    .plan-item:hover { border-color: var(--primary); transform: translateY(-2px); }
-    .plan-name { font-weight: 600; color: #333; margin-bottom: 10px; }
-    .plan-credits { font-size: 28px; font-weight: 700; color: var(--primary); }
-    .plan-price { font-size: 16px; color: #666; margin-top: 5px; }
-    .plan-per { font-size: 12px; color: #999; margin-top: 5px; }
-    .btn {
-      display: inline-block;
-      padding: 12px 30px;
-      border-radius: 8px;
-      font-size: 14px;
-      font-weight: 600;
-      text-decoration: none;
-      cursor: pointer;
-      border: none;
-      transition: all 0.3s;
-      background: linear-gradient(135deg, var(--primary), var(--secondary));
-      color: white;
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
     }
-    .btn:hover { transform: scale(1.02); }
-    .info-text { color: #666; line-height: 1.6; }
+    .card-title {
+      font-size: 16px; font-weight: 700; color: #333;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .card-title .icon { font-size: 20px; }
+
+    /* Purchase History */
+    .purchase-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 0;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .purchase-item:last-child { border-bottom: none; }
+    .purchase-info { display: flex; align-items: center; gap: 12px; }
+    .purchase-icon { font-size: 28px; }
+    .purchase-pack { font-weight: 600; color: #333; font-size: 15px; }
+    .purchase-meta { font-size: 12px; color: #999; margin-top: 2px; }
+    .purchase-right { text-align: right; }
+    .purchase-credits { font-weight: 700; color: var(--success); font-size: 16px; }
+    .purchase-amount { font-size: 13px; color: #888; margin-top: 2px; }
+    .purchase-status {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      margin-top: 4px;
+    }
+    .status-completed { background: #d1fae5; color: #059669; }
+    .status-pending { background: #fef3c7; color: #d97706; }
+    .status-refunded { background: #fee2e2; color: #dc2626; }
+
+    /* Plans Grid */
+    .plans-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
+    .plan-item {
+      border: 2px solid #eee;
+      border-radius: 14px;
+      padding: 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .plan-item:hover { border-color: var(--primary); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(102,126,234,0.15); }
+    .plan-name { font-weight: 600; color: #333; margin-bottom: 8px; }
+    .plan-credits { font-size: 26px; font-weight: 800; color: var(--primary); }
+    .plan-price { font-size: 14px; color: #666; margin-top: 4px; }
+    .plan-per { font-size: 11px; color: #999; margin-top: 2px; }
+
+    /* Account Info */
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+    .info-item { padding: 12px 0; border-bottom: 1px solid #f5f5f5; }
+    .info-label { font-size: 12px; color: #999; margin-bottom: 4px; }
+    .info-value { font-size: 14px; color: #333; font-weight: 500; }
+
+    /* Loading */
+    .loading-state {
+      text-align: center;
+      padding: 40px;
+      color: #999;
+    }
+    .loading-spinner {
+      width: 32px; height: 32px;
+      border: 3px solid #f0f0f0;
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 12px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .empty-state {
+      text-align: center;
+      padding: 30px;
+      color: #999;
+      font-size: 14px;
+    }
+
     @media (max-width: 768px) {
+      .stats-row { grid-template-columns: 1fr; }
       .plans-grid { grid-template-columns: 1fr; }
+      .info-grid { grid-template-columns: 1fr; }
+      .credit-value { font-size: 56px; }
     }
   </style>
 </head>
 <body>
   <div class="header">
     <div class="header-content">
-      <div class="logo">AI Background Remover</div>
+      <div class="logo">🎨 AI BG Remover</div>
       <div class="nav-links">
         <a href="/" class="nav-link">Home</a>
         <a href="/pricing" class="nav-link">Pricing</a>
@@ -104,98 +194,214 @@
       </div>
     </div>
   </div>
-  
+
   <div class="container">
+    <!-- Credits Banner -->
     <div class="credits-banner">
       <div class="credit-value" id="creditsValue">-</div>
       <div class="credit-label">Credits Remaining</div>
-      <p style="color: #999; margin-top: 10px; font-size: 13px;">Credits never expire</p>
+      <div class="credit-hint">Permanent credits • Never expire</div>
     </div>
-    
+
+    <!-- Stats Row -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-value" id="totalPurchased">0</div>
+        <div class="stat-label">Total Purchased</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="totalUsed">0</div>
+        <div class="stat-label">Credits Used</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="memberSince">-</div>
+        <div class="stat-label">Member Since</div>
+      </div>
+    </div>
+
+    <!-- Buy Credits -->
     <div class="card">
-      <div class="card-title"><span class="icon">💳</span> Buy Credits</div>
+      <div class="card-header">
+        <div class="card-title"><span class="icon">💳</span> Buy Credits</div>
+        <a href="/pricing" class="nav-link" style="background: var(--primary); color: white; font-size: 12px;">+ Add Credits</a>
+      </div>
       <div class="plans-grid" id="plansGrid"></div>
-      <p style="color: #999; font-size: 13px; margin-top: 15px; text-align: center;">
-        All credits are permanent and never expire
-      </p>
     </div>
-    
+
+    <!-- Purchase History -->
     <div class="card">
-      <div class="card-title"><span class="icon">📋</span> Account Info</div>
-      <p class="info-text">
-        <strong>Email:</strong> <span id="userEmail2">-</span><br>
-        <strong>Credits Used:</strong> <span id="totalUsed">0</span><br>
-        <strong>Member Since:</strong> <span id="memberSince">-</span>
-      </p>
+      <div class="card-header">
+        <div class="card-title"><span class="icon">📜</span> Purchase History</div>
+      </div>
+      <div id="purchasesLoading" class="loading-state">
+        <div class="loading-spinner"></div>
+        Loading...
+      </div>
+      <div id="purchasesList"></div>
+    </div>
+
+    <!-- Account Info -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><span class="icon">⚙️</span> Account Info</div>
+      </div>
+      <div class="info-grid">
+        <div class="info-item">
+          <div class="info-label">Email</div>
+          <div class="info-value" id="infoEmail">-</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Name</div>
+          <div class="info-value" id="infoName">-</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Current Credits</div>
+          <div class="info-value" id="infoCredits" style="color: var(--primary); font-weight: 700;">-</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">User ID</div>
+          <div class="info-value" id="infoUserId" style="font-size: 12px; color: #999;">-</div>
+        </div>
+      </div>
     </div>
   </div>
-  
+
   <script>
-    // Firebase configuration
     const firebaseConfig = {
       apiKey: "AIzaSyDzwv4aGmRzBA-t4tOsMF6JAwXmUAzJQ2g",
       authDomain: "image-background-remove-cdc6d.firebaseapp.com",
       projectId: "image-background-remove-cdc6d",
-      storageBucket: "image-background-remove-cdc6d.firebasestorage.app",
+      storageBucket: "image-bg-remove-cdc6d.firebasestorage.app",
       messagingSenderId: "155957397056",
       appId: "1:155957397056:web:a227c9487b32a1c16ac1a5"
     };
 
-    // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
-    
-    // Credit packs
+
     const creditPacks = {
-      starter: { credits: 10, price: 3.00, name: 'Starter' },
-      popular: { credits: 30, price: 6.00, name: 'Popular' },
-      power: { credits: 100, price: 15.00, name: 'Power' }
+      starter: { credits: 10, price: 3.00, name: 'Starter', icon: '📦' },
+      popular: { credits: 30, price: 6.00, name: 'Popular', icon: '⭐' },
+      power:    { credits: 100, price: 15.00, name: 'Power',    icon: '🚀' }
     };
-    
+
     async function loadUserData() {
-      // Wait for Firebase auth state
       return new Promise((resolve) => {
         auth.onAuthStateChanged(async (user) => {
           if (!user) {
-            // Not logged in, redirect to home
             window.location.href = '/';
             resolve();
             return;
           }
-          
-          // Update user info
+
+          // Register user with backend
+          await fetch('/api/user-register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id: user.uid,
+              email: user.email,
+              name: user.displayName || '',
+              avatar: user.photoURL || '',
+              provider: 'google'
+            })
+          });
+
+          // Update header
           document.getElementById('userName').textContent = user.displayName || user.email.split('@')[0];
           document.getElementById('userEmail').textContent = user.email;
-          document.getElementById('userEmail2').textContent = user.email;
-          
           if (user.photoURL) {
             document.getElementById('userAvatar').src = user.photoURL;
           }
-          
-          // Get quota from API
+
+          // Load quota and user info
           try {
             const resp = await fetch('/api/quota?userId=' + user.uid);
             const quota = await resp.json();
-            document.getElementById('creditsValue').textContent = quota.remaining || 0;
+            const remaining = quota.remaining ?? 0;
+            document.getElementById('creditsValue').textContent = remaining;
+            document.getElementById('infoCredits').textContent = remaining + ' credits';
           } catch (e) {
-            console.error('Failed to load quota:', e);
-            document.getElementById('creditsValue').textContent = '-';
+            document.getElementById('creditsValue').textContent = '0';
           }
-          
-          // Load plans
+
+          // Load purchase history
+          loadPurchaseHistory(user.uid);
+
+          // Load user details from DB
+          loadUserDetails(user.uid);
+
+          // Render plans
           loadPlans();
+
           resolve();
         });
       });
     }
-    
+
+    async function loadUserDetails(userId) {
+      try {
+        const resp = await fetch('/api/quota?userId=' + userId);
+        const quota = await resp.json();
+        if (quota.user) {
+          document.getElementById('infoEmail').textContent = quota.user.email || '-';
+          document.getElementById('infoName').textContent = quota.user.name || '-';
+        }
+        document.getElementById('infoUserId').textContent = userId;
+      } catch (e) { console.error(e); }
+    }
+
+    async function loadPurchaseHistory(userId) {
+      const loading = document.getElementById('purchasesLoading');
+      const list = document.getElementById('purchasesList');
+
+      try {
+        const resp = await fetch('/api/purchases?userId=' + userId);
+        const data = await resp.json();
+        const purchases = data.purchases || [];
+
+        loading.style.display = 'none';
+
+        if (purchases.length === 0) {
+          list.innerHTML = '<div class="empty-state">No purchases yet. <a href="/pricing" style="color: var(--primary);">Buy credits →</a></div>';
+          return;
+        }
+
+        list.innerHTML = purchases.map(p => {
+          const pack = creditPacks[p.pack_id] || { icon: '📦', name: p.pack_id, credits: p.credits };
+          const statusClass = p.status === 'completed' ? 'status-completed' : p.status === 'refunded' ? 'status-refunded' : 'status-pending';
+          const date = new Date(p.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+          return `
+            <div class="purchase-item">
+              <div class="purchase-info">
+                <span class="purchase-icon">${pack.icon}</span>
+                <div>
+                  <div class="purchase-pack">${pack.name}</div>
+                  <div class="purchase-meta">${date}</div>
+                </div>
+              </div>
+              <div class="purchase-right">
+                <div class="purchase-credits">+${p.credits}</div>
+                <div class="purchase-amount">$${Number(p.amount).toFixed(2)}</div>
+                <span class="purchase-status ${statusClass}">${p.status}</span>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+      } catch (e) {
+        loading.style.display = 'none';
+        list.innerHTML = '<div class="empty-state">Failed to load purchase history.</div>';
+      }
+    }
+
     function loadPlans() {
       const grid = document.getElementById('plansGrid');
       Object.entries(creditPacks).forEach(([id, pack]) => {
         const pricePer = (pack.price / pack.credits).toFixed(2);
         grid.innerHTML += `
           <div class="plan-item" onclick="selectPack('${id}')">
-            <div class="plan-name">${pack.name}</div>
+            <div class="plan-name">${pack.icon} ${pack.name}</div>
             <div class="plan-credits">${pack.credits}</div>
             <div class="plan-price">$${pack.price.toFixed(2)}</div>
             <div class="plan-per">$${pricePer}/credit</div>
@@ -203,11 +409,11 @@
         `;
       });
     }
-    
+
     function selectPack(packId) {
       window.location.href = '/pricing?pack=' + packId;
     }
-    
+
     loadUserData();
   </script>
 </body>

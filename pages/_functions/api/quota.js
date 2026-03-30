@@ -47,6 +47,17 @@ export async function onRequestGet(context) {
     ).bind(userId).first();
     
     if (!user) {
+      // Auto-create user record on first access (upsert by id)
+      // Get optional user info from query params
+      const email = url.searchParams.get('email') || `${userId}@unknown.local`;
+      const name = url.searchParams.get('name') || 'User';
+      
+      await context.env.DB.prepare(
+        `INSERT INTO users (id, email, name, credits, total_purchased, total_used)
+         VALUES (?, ?, ?, 0, 0, 0)
+         ON CONFLICT(id) DO NOTHING`
+      ).bind(userId, email, name).run();
+      
       return new Response(JSON.stringify({
         allowed: false,
         watermark: false,
@@ -54,7 +65,8 @@ export async function onRequestGet(context) {
         code: 'USER_NOT_FOUND',
         requiresSignup: false,
         requiresPurchase: true,
-        guest: false
+        guest: false,
+        user: { id: userId, email, name }
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });

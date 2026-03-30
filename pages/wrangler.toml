@@ -3,6 +3,8 @@ compatibility_date = "2024-01-01"
 
 [vars]
 REMOVE_BG_API_KEY = "1teo3E5gQ5Rk82dN7CCXFZ1G"
+# PayPal Client ID is set via `wrangler secret put PAYPAL_CLIENT_ID`
+# PayPal Client Secret is set via `wrangler secret put PAYPAL_CLIENT_SECRET`
 
 [assets]
 directory = "./static"

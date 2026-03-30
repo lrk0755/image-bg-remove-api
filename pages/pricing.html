@@ -524,8 +524,8 @@
       power: { credits: 100, price: 15.00 }
     };
     
-    // PayPal Client ID - using the provided ID
-    const PAYPAL_CLIENT_ID = 'AWXT8wDvCx3g08C4Ovk4ZEmkLFoSpcgvTyMVZqMp2RURFwvJiGcw3Er5cXTChwvDKtYMZYzbiJPfIhdI';
+    // PayPal Client ID - Sandbox
+    const PAYPAL_CLIENT_ID = 'AbDIfefF99WTrPstEnvsaC7h6ZCd8Y7KsszjSvqcM1hbbDMx2D7dRJ3mwQ_TJrE0tn46tOsCXeOotTFX';
     
     // Firebase configuration
     const firebaseConfig = {
@@ -618,11 +618,30 @@
         return;
       }
       
-      // Use currentUserId from auth state
-      const userId = currentUserId || (firebase.auth().currentUser ? firebase.auth().currentUser.uid : null);
+      const user = firebase.auth().currentUser;
+      const isLoggedIn = !!user;
       
       Object.keys(creditPacks).forEach(packId => {
         const pack = creditPacks[packId];
+        const container = document.getElementById(`paypal-btn-${packId}`);
+        
+        // If not logged in, show sign-in prompt instead of PayPal button
+        if (!isLoggedIn) {
+          container.innerHTML = `
+            <button onclick="signInWithGoogle()" style="
+              width: 100%;
+              padding: 10px;
+              background: #fff;
+              border: 2px solid #667eea;
+              border-radius: 8px;
+              color: #667eea;
+              font-size: 14px;
+              font-weight: 600;
+              cursor: pointer;
+            ">🔐 Sign in to purchase</button>
+          `;
+          return;
+        }
         
         paypal.Buttons({
           style: {
@@ -714,11 +733,13 @@
               const addCreditsResult = await addCreditsResp.json();
               console.log('Add credits result:', addCreditsResult);
               
-              // Show success modal
+              // Show success modal, Continue button redirects to account page
               showModal(
                 '✅',
                 'Payment Successful!',
-                `${pack.credits} credits have been added to your account!`
+                `${pack.credits} credits have been added to your account!`,
+                'Go to My Account →',
+                'account'
               );
               
             } catch (error) {
@@ -759,6 +780,7 @@
     }
     
     // Show modal with custom content
+    // buttonAction: 'close' | 'signin' | 'account'
     function showModal(icon, title, message, buttonText = 'Continue', buttonAction = 'close') {
       document.getElementById('modalIcon').textContent = icon;
       document.getElementById('modalTitle').textContent = title;
@@ -767,6 +789,11 @@
       btn.textContent = buttonText;
       if (buttonAction === 'signin') {
         btn.onclick = function() { signInWithGoogle(); };
+      } else if (buttonAction === 'account') {
+        btn.onclick = function() {
+          closeModal();
+          window.location.href = '/account';
+        };
       } else {
         btn.onclick = function() { closeModal(); };
       }
