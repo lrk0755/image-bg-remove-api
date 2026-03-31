@@ -1,4 +1,4 @@
-name = "image-bg-remove-api"
+name = "image-bg-remove"
 compatibility_date = "2024-01-01"
 
 [vars]
