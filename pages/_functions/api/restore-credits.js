@@ -62,7 +62,7 @@ export async function onRequestPost(context) {
     }
 
     const auth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
-    const tokenResp = await fetch('https://api-m.paypal.com/v1/oauth2/token', {
+    const tokenResp = await fetch('https://api-m.sandbox.paypal.com/v1/oauth2/token', {
       method: 'POST',
       headers: {
         'Authorization': `Basic ${auth}`,
@@ -79,7 +79,7 @@ export async function onRequestPost(context) {
     const accessToken = tokenData.access_token;
 
     // Get order details from PayPal
-    const orderResp = await fetch(`https://api-m.paypal.com/v2/checkout/orders/${orderId}`, {
+    const orderResp = await fetch(`https://api-m.sandbox.paypal.com/v2/checkout/orders/${orderId}`, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json'

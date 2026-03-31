@@ -443,7 +443,7 @@
           alert(`❌ ${result.message || result.error}\n\nIf you paid but see this error, please contact support with your PayPal transaction ID.`);
         }
       } catch (e) {
-        alert('❌ Network error. Please try again.');
+        alert(`❌ Network error: ${e.message || e}\n\nIf this persists, please contact support with your PayPal transaction ID.`);
       } finally {
         btn.disabled = false;
         btn.textContent = '🔧 Restore Credits';

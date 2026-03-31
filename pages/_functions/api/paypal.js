@@ -13,6 +13,11 @@ export async function onRequestPost(context) {
   try {
     const { pack, userId } = await context.request.json();
     
+    // Determine PayPal API base URL based on environment
+    const paypalEnv = context.env.PAYPAL_ENV === 'live'
+      ? 'api-m.paypal.com'
+      : 'api-m.sandbox.paypal.com';
+    
     // Credit packs configuration
     const creditPacks = {
       starter: { credits: 10, price: 3.00, name: 'Starter Pack' },
@@ -41,7 +46,7 @@ export async function onRequestPost(context) {
 
     // Get access token
     const auth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
-    const tokenResponse = await fetch('https://api.paypal.com/v1/oauth2/token', {
+    const tokenResponse = await fetch(`https://${paypalEnv}/v1/oauth2/token`, {
       method: 'POST',
       headers: {
         'Authorization': `Basic ${auth}`,
@@ -58,7 +63,7 @@ export async function onRequestPost(context) {
     const accessToken = tokenData.access_token;
 
     // Create PayPal order
-    const orderResponse = await fetch('https://api.paypal.com/v2/checkout/orders', {
+    const orderResponse = await fetch(`https://${paypalEnv}/v2/checkout/orders`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
@@ -132,13 +137,18 @@ export async function onRequestPut(context) {
       });
     }
 
+    // Determine PayPal API base URL based on environment
+    const paypalEnv = context.env.PAYPAL_ENV === 'live'
+      ? 'api-m.paypal.com'
+      : 'api-m.sandbox.paypal.com';
+    
     // PayPal API credentials
     const clientId = context.env.PAYPAL_CLIENT_ID;
     const clientSecret = context.env.PAYPAL_CLIENT_SECRET;
     
     // Get access token
     const auth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
-    const tokenResponse = await fetch('https://api.paypal.com/v1/oauth2/token', {
+    const tokenResponse = await fetch(`https://${paypalEnv}/v1/oauth2/token`, {
       method: 'POST',
       headers: {
         'Authorization': `Basic ${auth}`,
@@ -151,7 +161,7 @@ export async function onRequestPut(context) {
     const accessToken = tokenData.access_token;
 
     // Capture the order
-    const captureResponse = await fetch(`https://api.paypal.com/v2/checkout/orders/${orderId}/capture`, {
+    const captureResponse = await fetch(`https://${paypalEnv}/v2/checkout/orders/${orderId}/capture`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
