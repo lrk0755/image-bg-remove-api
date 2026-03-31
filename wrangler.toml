@@ -13,5 +13,6 @@ binding = "DB"
 database_name = "image-bg-remove-db"
 database_id = "e3acf49c-8547-428e-841d-55cced1aae52"
 
-[functions]
-directory = "./pages/_functions"
+# Advanced Mode: _worker.js in pages/ directory handles all /api/* routes
+# pages_build_output_dir tells CF where static assets live
+pages_build_output_dir = "./pages"
