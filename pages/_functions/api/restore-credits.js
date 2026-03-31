@@ -62,7 +62,7 @@ export async function onRequestPost(context) {
     }
 
     const auth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
-    const tokenResp = await fetch('https://api-m.sandbox.paypal.com/v1/oauth2/token', {
+    const tokenResp = await fetch('https://api-m.paypal.com/v1/oauth2/token', {
       method: 'POST',
       headers: {
         'Authorization': `Basic ${auth}`,
@@ -79,7 +79,7 @@ export async function onRequestPost(context) {
     const accessToken = tokenData.access_token;
 
     // Get order details from PayPal
-    const orderResp = await fetch(`https://api-m.sandbox.paypal.com/v2/checkout/orders/${orderId}`, {
+    const orderResp = await fetch(`https://api-m.paypal.com/v2/checkout/orders/${orderId}`, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json'
@@ -118,11 +118,17 @@ export async function onRequestPost(context) {
     const creditsToAdd = (creditPacks[packId]?.credits) || parseInt(customData?.credits) || Math.round(parseFloat(amount || 0) * 10);
 
     // Ensure user exists
-    await context.env.DB.prepare(
-      `INSERT INTO users (id, credits, total_purchased, total_used, created_at, updated_at)
-       VALUES (?, 0, 0, 0, datetime('now', 'utc'), datetime('now', 'utc'))
-       ON CONFLICT(id) DO NOTHING`
-    ).bind(userId).run();
+    const existingRestoreUser = await context.env.DB.prepare(
+      'SELECT id FROM users WHERE id = ?'
+    ).bind(userId).first();
+    
+    if (!existingRestoreUser) {
+      const syntheticEmail = `user_${userId}@placeholder.local`;
+      await context.env.DB.prepare(
+        `INSERT INTO users (id, email, credits, total_purchased, total_used, created_at, updated_at)
+         VALUES (?, ?, 0, 0, 0, datetime('now', 'utc'), datetime('now', 'utc'))`
+      ).bind(userId, syntheticEmail).run();
+    }
 
     // Insert payment and update credits
     await context.env.DB.prepare(

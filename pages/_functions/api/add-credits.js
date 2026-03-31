@@ -66,22 +66,34 @@ export async function onRequestPost(context) {
       });
     }
     
-    // Ensure user exists (upsert) - prevents failures if user never hit quota endpoint
-    await context.env.DB.prepare(
-      `INSERT INTO users (id, credits, total_purchased, total_used, created_at, updated_at)
-       VALUES (?, 0, 0, 0, datetime('now', 'utc'), datetime('now', 'utc'))
-       ON CONFLICT(id) DO NOTHING`
-    ).bind(userId).run();
+    // Check if user exists first
+    const existingUser = await context.env.DB.prepare(
+      'SELECT id FROM users WHERE id = ?'
+    ).bind(userId).first();
+    
+    if (!existingUser) {
+      // User doesn't exist — create with placeholder email (they can update later)
+      // Use a deterministic email derived from userId to satisfy any future constraints
+      const syntheticEmail = `user_${userId}@placeholder.local`;
+      await context.env.DB.prepare(
+        `INSERT INTO users (id, email, credits, total_purchased, total_used, created_at, updated_at)
+         VALUES (?, ?, 0, 0, 0, datetime('now', 'utc'), datetime('now', 'utc'))`
+      ).bind(userId, syntheticEmail).run();
+    }
     
     // Insert payment record
     await context.env.DB.prepare(
       'INSERT INTO payments (user_id, order_id, pack_id, credits, amount, status) VALUES (?, ?, ?, ?, ?, ?)'
     ).bind(userId, orderId, packId || 'unknown', creditsToAdd, paymentAmount, 'completed').run();
     
-    // Update user credits
-    await context.env.DB.prepare(
-      'UPDATE users SET credits = credits + ?, total_purchased = total_purchased + ? WHERE id = ?'
+    // Update user credits — use subquery to verify rows were actually affected
+    const updateResult = await context.env.DB.prepare(
+      'UPDATE users SET credits = credits + ?, total_purchased = total_purchased + ?, updated_at = datetime(\'now\', \'utc\') WHERE id = ?'
     ).bind(creditsToAdd, creditsToAdd, userId).run();
+    
+    if (updateResult.meta?.changes === 0) {
+      throw new Error(`Failed to update credits for user ${userId} — user row not found after upsert`);
+    }
     
     // Get updated balance
     const updatedUser = await context.env.DB.prepare(

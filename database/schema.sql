@@ -1,7 +1,7 @@
 -- Users table
 CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
-  email TEXT NOT NULL,
+  email TEXT,
   name TEXT,
   avatar TEXT,
   provider TEXT DEFAULT 'google',
