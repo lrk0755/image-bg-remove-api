@@ -354,32 +354,31 @@ async function handlePaypalCapture(request, env) {
 async function handleRemoveBg(request, env) {
   if (request.method === 'OPTIONS') return optionsResponse('POST, OPTIONS');
 
-  const formData = await request.formData();
-  const imageFile = formData.get('image');
-  if (!imageFile) return jsonResponse({ error: 'No image provided' }, 400);
+  try {
+    const { image, watermark } = await request.json();
+    if (!image) return jsonResponse({ error: 'No image provided' }, 400);
 
-  const imageBuffer = await imageFile.arrayBuffer();
-  const uint8Array = new Uint8Array(imageBuffer);
-  let binary = '';
-  for (let i = 0; i < uint8Array.length; i++) binary += String.fromCharCode(uint8Array[i]);
-  const base64 = btoa(binary);
+    const apiKey = env.REMOVE_BG_API_KEY || '1teo3E5gQ5Rk82dN7CCXFZ1G';
+    const response = await fetch('https://api.remove.bg/v1.0/removebg', {
+      method: 'POST',
+      headers: { 'X-Api-Key': apiKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image_file_b64: image, size: 'auto' })
+    });
 
-  const apiKey = env.REMOVE_BG_API_KEY || '1teo3E5gQ5Rk82dN7CCXFZ1G';
-  const response = await fetch('https://api.remove.bg/v1.0/removebg', {
-    method: 'POST',
-    headers: { 'X-Api-Key': apiKey, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ image_file_b64: base64, size: 'auto' })
-  });
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[remove-bg] API error:', response.status, errorText);
+      return jsonResponse({ error: 'Image processing failed. Please try again.' }, 502);
+    }
 
-  if (!response.ok) {
-    const error = await response.text();
-    return new Response(error, { status: response.status, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+    const resultBuffer = await response.arrayBuffer();
+    const base64 = btoa(String.fromCharCode(...new Uint8Array(resultBuffer)));
+    return jsonResponse({ image: base64 });
+
+  } catch (error) {
+    console.error('[remove-bg] ERROR:', error.message, error.stack);
+    return jsonResponse({ error: error.message || 'Internal error' }, 500);
   }
-
-  const resultBuffer = await response.arrayBuffer();
-  return new Response(resultBuffer, {
-    headers: { 'Content-Type': 'image/png', 'Content-Disposition': 'attachment; filename="removed-bg.png"', 'Access-Control-Allow-Origin': '*' }
-  });
 }
 
 async function handlePurchases(request, env) {

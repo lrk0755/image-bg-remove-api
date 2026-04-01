@@ -447,7 +447,10 @@
     
     async function loadQuota() {
       try {
-        const resp = await fetch(API_BASE + '/api/quota', { credentials: 'include' });
+        const user = firebase.auth().currentUser;
+        const url = new URL(API_BASE + '/api/quota');
+        if (user) url.searchParams.set('userId', user.uid);
+        const resp = await fetch(url.toString(), { credentials: 'include' });
         currentQuota = await resp.json();
         updateQuotaUI();
       } catch (e) {
