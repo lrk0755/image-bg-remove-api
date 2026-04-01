@@ -5,6 +5,7 @@ pages_build_output_dir = "./pages"
 [vars]
 REMOVE_BG_API_KEY = "1teo3E5gQ5Rk82dN7CCXFZ1G"
 PAYPAL_ENV = "sandbox"
+PAYPAL_CLIENT_ID = "AbDIfefF99WTrPstEnvsaC7h6ZCd8Y7KsszjSvqcM1hbbDMx2D7dRJ3mwQ_TJrE0tn46tOsCXeOotTFX"
 
 [[d1_databases]]
 binding = "DB"
