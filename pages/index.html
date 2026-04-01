@@ -512,51 +512,86 @@
     // ============ USER AUTH ============
     
     async function checkAuthStatus() {
+      // Wait for Firebase to finish restoring auth state before loading quota
+      // This prevents the null→user race that caused currentQuota to be set to guest state
+      await auth.authStateReady();
+      const user = auth.currentUser;
+      
+      if (user) {
+        currentUser = user;
+        document.getElementById('loginBtn').style.display = 'none';
+        document.getElementById('userArea').style.display = 'flex';
+        document.getElementById('userName').textContent = user.displayName || user.email.split('@')[0];
+        if (user.photoURL) {
+          document.getElementById('userAvatar').src = user.photoURL;
+        }
+        
+        // Hide signup CTA, hide quota bar for logged in users
+        document.getElementById('signupCta').classList.remove('show');
+        document.getElementById('quotaBar').style.display = 'none';
+        document.getElementById('creditsBadge').textContent = '0 credits';
+        
+        // Hide "How it works" section for logged in users
+        document.querySelector('.how-it-works')?.classList.add('hidden');
+        
+        // Register user with backend (don't await — let it run in background)
+        fetch(API_BASE + '/api/user/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            id: user.uid,
+            email: user.email,
+            name: user.displayName,
+            avatar: user.photoURL || '',
+            provider: 'google'
+          })
+        });
+        
+        await loadQuota(user.uid);
+      } else {
+        currentUser = null;
+        document.getElementById('loginBtn').style.display = 'block';
+        document.getElementById('userArea').style.display = 'none';
+        document.getElementById('userMenu').classList.remove('show');
+        
+        // Show signup CTA, hide quota bar
+        document.getElementById('signupCta').classList.add('show');
+        document.getElementById('quotaBar').style.display = 'none';
+        
+        document.querySelector('.how-it-works')?.classList.remove('hidden');
+        await loadQuota();
+      }
+
+      // Still listen for future auth changes (sign in/out after page load)
       auth.onAuthStateChanged(async (user) => {
-        if (user) {
-          currentUser = user;
-          document.getElementById('loginBtn').style.display = 'none';
-          document.getElementById('userArea').style.display = 'flex';
-          document.getElementById('userName').textContent = user.displayName || user.email.split('@')[0];
-          if (user.photoURL) {
-            document.getElementById('userAvatar').src = user.photoURL;
+        if (user !== currentUser) {
+          if (user) {
+            currentUser = user;
+            document.getElementById('loginBtn').style.display = 'none';
+            document.getElementById('userArea').style.display = 'flex';
+            document.getElementById('userName').textContent = user.displayName || user.email.split('@')[0];
+            if (user.photoURL) document.getElementById('userAvatar').src = user.photoURL;
+            document.getElementById('signupCta').classList.remove('show');
+            document.getElementById('quotaBar').style.display = 'none';
+            document.querySelector('.how-it-works')?.classList.add('hidden');
+            fetch(API_BASE + '/api/user/register', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify({ id: user.uid, email: user.email, name: user.displayName, avatar: user.photoURL || '', provider: 'google' })
+            });
+            await loadQuota(user.uid);
+          } else {
+            currentUser = null;
+            document.getElementById('loginBtn').style.display = 'block';
+            document.getElementById('userArea').style.display = 'none';
+            document.getElementById('userMenu').classList.remove('show');
+            document.getElementById('signupCta').classList.add('show');
+            document.getElementById('quotaBar').style.display = 'none';
+            document.querySelector('.how-it-works')?.classList.remove('hidden');
+            await loadQuota();
           }
-          
-          // Hide signup CTA, hide quota bar for logged in users
-          document.getElementById('signupCta').classList.remove('show');
-          document.getElementById('quotaBar').style.display = 'none';
-          document.getElementById('creditsBadge').textContent = '0 credits';
-          
-          // Hide "How it works" section for logged in users
-          document.querySelector('.how-it-works')?.classList.add('hidden');
-          
-          // Register user with backend
-          await fetch(API_BASE + '/api/user/register', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({
-              id: user.uid,
-              email: user.email,
-              name: user.displayName,
-              avatar: user.photoURL || '',
-              provider: 'google'
-            })
-          });
-          
-          await loadQuota(user.uid);
-        } else {
-          currentUser = null;
-          document.getElementById('loginBtn').style.display = 'block';
-          document.getElementById('userArea').style.display = 'none';
-          document.getElementById('userMenu').classList.remove('show');
-          
-          // Show signup CTA, hide quota bar
-          document.getElementById('signupCta').classList.add('show');
-          document.getElementById('quotaBar').style.display = 'none';
-          
-          document.querySelector('.how-it-works')?.classList.remove('hidden');
-          await loadQuota();
         }
       });
     }
