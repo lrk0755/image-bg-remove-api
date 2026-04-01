@@ -445,11 +445,10 @@
 
     // ============ QUOTA MANAGEMENT ============
     
-    async function loadQuota() {
+    async function loadQuota(userId) {
       try {
-        const user = firebase.auth().currentUser;
         const url = new URL(API_BASE + '/api/quota');
-        if (user) url.searchParams.set('userId', user.uid);
+        if (userId) url.searchParams.set('userId', userId);
         const resp = await fetch(url.toString(), { credentials: 'include' });
         currentQuota = await resp.json();
         updateQuotaUI();
@@ -505,7 +504,8 @@
     }
     
     async function checkQuotaBeforeProcess() {
-      await loadQuota();
+      const user = firebase.auth().currentUser;
+      await loadQuota(user?.uid);
       return currentQuota?.allowed === true;
     }
 
@@ -544,7 +544,7 @@
             })
           });
           
-          await loadQuota();
+          await loadQuota(user.uid);
         } else {
           currentUser = null;
           document.getElementById('loginBtn').style.display = 'block';
@@ -706,7 +706,7 @@
           loading.classList.remove('show');
           
           // Reload quota after successful use
-          await loadQuota();
+          await loadQuota(firebase.auth().currentUser?.uid);
         } catch (error) {
           alert('Processing failed: ' + error.message);
           console.error(error);
