@@ -524,8 +524,8 @@
       power: { credits: 100, price: 15.00 }
     };
     
-    // PayPal Client ID - Sandbox
-    const PAYPAL_CLIENT_ID = 'AbDIfefF99WTrPstEnvsaC7h6ZCd8Y7KsszjSvqcM1hbbDMx2D7dRJ3mwQ_TJrE0tn46tOsCXeOotTFX';
+    // Fallback PayPal Client ID (sandbox) — used only if /api/config returns empty
+    const PAYPAL_FALLBACK_CLIENT_ID = 'AbDIfefF99WTrPstEnvsaC7h6ZCd8Y7KsszjSvqcM1hbbDMx2D7dRJ3mwQ_TJrE0tn46tOsCXeOotTFX';
     
     // Firebase configuration
     const firebaseConfig = {
@@ -579,9 +579,26 @@
     });
     
     // Load PayPal SDK dynamically
-    function loadPayPalSDK() {
+    async function loadPayPalSDK() {
+      // Fetch PayPal Client ID from backend config (allows switching between sandbox/live via env vars)
+      let paypalClientId = PAYPAL_FALLBACK_CLIENT_ID;
+      try {
+        const configResp = await fetch('/api/config');
+        if (configResp.ok) {
+          const config = await configResp.json();
+          if (config.paypalClientId) {
+            paypalClientId = config.paypalClientId;
+            console.log('PayPal Client ID loaded from config:', paypalClientId.substring(0, 10) + '...');
+          } else {
+            console.warn('PayPal Client ID not set in backend config, using fallback');
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to fetch PayPal config, using fallback ID:', e);
+      }
+      
       const script = document.createElement('script');
-      script.src = `https://www.paypal.com/sdk/js?client-id=${PAYPAL_CLIENT_ID}&currency=USD`;
+      script.src = `https://www.paypal.com/sdk/js?client-id=${paypalClientId}&currency=USD`;
       script.async = true;
       script.onload = function() {
         console.log('PayPal SDK loaded successfully');
