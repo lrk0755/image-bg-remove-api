@@ -147,110 +147,134 @@ async function handleQuota(request, env) {
 async function handleAddCredits(request, env) {
   if (request.method === 'OPTIONS') return optionsResponse('POST, OPTIONS');
 
-  const { userId, credits, orderId, packId, amount } = await request.json();
+  try {
+    const { userId, credits, orderId, packId, amount } = await request.json();
 
-  if (!userId) return jsonResponse({ success: false, error: 'USER_ID_MISSING', message: 'User not logged in' }, 401);
-  if (!credits || !orderId) return jsonResponse({ success: false, error: 'MISSING_FIELDS' }, 400);
+    if (!userId) return jsonResponse({ success: false, error: 'USER_ID_MISSING', message: 'User not logged in. Please sign in to receive credits.' }, 401);
+    if (!credits || !orderId) return jsonResponse({ success: false, error: 'MISSING_FIELDS', message: 'Missing credits or orderId' }, 400);
 
-  const creditPacks = { starter: { credits: 10, price: 3.00 }, popular: { credits: 30, price: 6.00 }, power: { credits: 100, price: 15.00 } };
-  const creditsToAdd = (packId && creditPacks[packId]) ? creditPacks[packId].credits : parseInt(credits, 10);
-  const paymentAmount = (packId && creditPacks[packId]) ? creditPacks[packId].price : parseFloat(amount || 0);
+    const creditPacks = { starter: { credits: 10, price: 3.00 }, popular: { credits: 30, price: 6.00 }, power: { credits: 100, price: 15.00 } };
+    const creditsToAdd = (packId && creditPacks[packId]) ? creditPacks[packId].credits : parseInt(credits, 10);
+    const paymentAmount = (packId && creditPacks[packId]) ? creditPacks[packId].price : parseFloat(amount || 0);
 
-  const existingPayment = await env.DB.prepare('SELECT * FROM payments WHERE order_id = ?').bind(orderId).first();
-  if (existingPayment) {
-    return jsonResponse({ success: true, creditsAdded: 0, message: 'Payment already processed' });
-  }
+    // Idempotency: check if already processed
+    const existingPayment = await env.DB.prepare('SELECT * FROM payments WHERE order_id = ?').bind(orderId).first();
+    if (existingPayment) {
+      return jsonResponse({ success: true, creditsAdded: 0, message: 'Payment already processed', totalCredits: existingPayment.credits });
+    }
 
-  const existingUser = await env.DB.prepare('SELECT id FROM users WHERE id = ?').bind(userId).first();
-  if (!existingUser) {
+    // Ensure user exists
+    const existingUser = await env.DB.prepare('SELECT id FROM users WHERE id = ?').bind(userId).first();
+    if (!existingUser) {
+      await env.DB.prepare(
+        `INSERT INTO users (id, email, credits, total_purchased, total_used, created_at, updated_at)
+         VALUES (?, ?, 0, 0, 0, datetime('now', 'utc'), datetime('now', 'utc'))`
+      ).bind(userId, `user_${userId}@placeholder.local`).run();
+    }
+
+    // Record payment
     await env.DB.prepare(
-      `INSERT INTO users (id, email, credits, total_purchased, total_used, created_at, updated_at)
-       VALUES (?, ?, 0, 0, 0, datetime('now', 'utc'), datetime('now', 'utc'))`
-    ).bind(userId, `user_${userId}@placeholder.local`).run();
+      'INSERT INTO payments (user_id, order_id, pack_id, credits, amount, status) VALUES (?, ?, ?, ?, ?, ?)'
+    ).bind(userId, orderId, packId || 'unknown', creditsToAdd, paymentAmount, 'completed').run();
+
+    // Update user credits
+    const updateResult = await env.DB.prepare(
+      'UPDATE users SET credits = credits + ?, total_purchased = total_purchased + ?, updated_at = datetime(\'now\', \'utc\') WHERE id = ?'
+    ).bind(creditsToAdd, creditsToAdd, userId).run();
+
+    if (updateResult.meta?.changes === 0) {
+      // User might have been deleted between checks — re-insert and retry
+      await env.DB.prepare(
+        `INSERT OR IGNORE INTO users (id, email, credits, total_purchased, total_used, created_at, updated_at)
+         VALUES (?, ?, 0, 0, 0, datetime('now', 'utc'), datetime('now', 'utc'))`
+      ).bind(userId, `user_${userId}@placeholder.local`).run();
+      await env.DB.prepare(
+        'UPDATE users SET credits = credits + ?, total_purchased = total_purchased + ?, updated_at = datetime(\'now\', \'utc\') WHERE id = ?'
+      ).bind(creditsToAdd, creditsToAdd, userId).run();
+    }
+
+    const updatedUser = await env.DB.prepare('SELECT credits FROM users WHERE id = ?').bind(userId).first();
+    console.log(`[add-credits] SUCCESS: Added ${creditsToAdd} credits to user ${userId}. Order: ${orderId}. New balance: ${updatedUser?.credits}`);
+
+    return jsonResponse({ success: true, creditsAdded: creditsToAdd, totalCredits: updatedUser?.credits || creditsToAdd, message: `${creditsToAdd} credits added successfully!` });
+
+  } catch (error) {
+    console.error('[add-credits] ERROR:', error.message, error.stack);
+    // Always return JSON even on error — this prevents "Unexpected token '<'" in the frontend
+    return jsonResponse({ success: false, error: 'INTERNAL_ERROR', message: error.message }, 500);
   }
-
-  await env.DB.prepare(
-    'INSERT INTO payments (user_id, order_id, pack_id, credits, amount, status) VALUES (?, ?, ?, ?, ?, ?)'
-  ).bind(userId, orderId, packId || 'unknown', creditsToAdd, paymentAmount, 'completed').run();
-
-  const updateResult = await env.DB.prepare(
-    'UPDATE users SET credits = credits + ?, total_purchased = total_purchased + ?, updated_at = datetime(\'now\', \'utc\') WHERE id = ?'
-  ).bind(creditsToAdd, creditsToAdd, userId).run();
-
-  if (updateResult.meta?.changes === 0) {
-    throw new Error(`Failed to update credits for user ${userId}`);
-  }
-
-  const updatedUser = await env.DB.prepare('SELECT credits FROM users WHERE id = ?').bind(userId).first();
-  console.log(`[add-credits] SUCCESS: Added ${creditsToAdd} credits to user ${userId}. Order: ${orderId}. New balance: ${updatedUser?.credits}`);
-
-  return jsonResponse({ success: true, creditsAdded: creditsToAdd, totalCredits: updatedUser?.credits || creditsToAdd });
 }
 
 async function handleRestoreCredits(request, env) {
   if (request.method === 'OPTIONS') return optionsResponse('POST, OPTIONS');
 
-  const { orderId, userId } = await request.json();
-  if (!orderId || !userId) return jsonResponse({ success: false, error: 'orderId and userId required' }, 400);
+  try {
+    const { orderId, userId } = await request.json();
+    if (!orderId || !userId) return jsonResponse({ success: false, error: 'orderId and userId required' }, 400);
 
-  const existingPayment = await env.DB.prepare('SELECT * FROM payments WHERE order_id = ?').bind(orderId).first();
-  if (existingPayment) {
-    const user = await env.DB.prepare('SELECT credits FROM users WHERE id = ?').bind(userId).first();
-    return jsonResponse({ success: true, alreadyProcessed: true, currentBalance: user?.credits || 0 });
-  }
+    const existingPayment = await env.DB.prepare('SELECT * FROM payments WHERE order_id = ?').bind(orderId).first();
+    if (existingPayment) {
+      const user = await env.DB.prepare('SELECT credits FROM users WHERE id = ?').bind(userId).first();
+      return jsonResponse({ success: true, alreadyProcessed: true, currentBalance: user?.credits || 0 });
+    }
 
-  const clientId = env.PAYPAL_CLIENT_ID;
-  const clientSecret = env.PAYPAL_CLIENT_SECRET;
-  if (!clientId || !clientSecret) return jsonResponse({ success: false, error: 'PayPal not configured' }, 500);
+    const clientId = env.PAYPAL_CLIENT_ID;
+    const clientSecret = env.PAYPAL_CLIENT_SECRET;
+    if (!clientId || !clientSecret) return jsonResponse({ success: false, error: 'PayPal not configured' }, 500);
 
-  const paypalEnv = env.PAYPAL_ENV === 'live' ? 'api-m.paypal.com' : 'api-m.sandbox.paypal.com';
-  const auth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+    const paypalEnv = env.PAYPAL_ENV === 'live' ? 'api-m.paypal.com' : 'api-m.sandbox.paypal.com';
+    const auth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
 
-  const tokenResp = await fetch(`https://${paypalEnv}/v1/oauth2/token`, {
-    method: 'POST',
-    headers: { 'Authorization': `Basic ${auth}`, 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: 'grant_type=client_credentials'
-  });
-  if (!tokenResp.ok) throw new Error('Failed to get PayPal access token');
-  const { access_token } = await tokenResp.json();
+    const tokenResp = await fetch(`https://${paypalEnv}/v1/oauth2/token`, {
+      method: 'POST',
+      headers: { 'Authorization': `Basic ${auth}`, 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: 'grant_type=client_credentials'
+    });
+    if (!tokenResp.ok) throw new Error('Failed to get PayPal access token');
+    const { access_token } = await tokenResp.json();
 
-  const orderResp = await fetch(`https://${paypalEnv}/v2/checkout/orders/${orderId}`, {
-    headers: { 'Authorization': `Bearer ${access_token}`, 'Content-Type': 'application/json' }
-  });
-  if (!orderResp.ok) throw new Error('Could not verify payment with PayPal');
+    const orderResp = await fetch(`https://${paypalEnv}/v2/checkout/orders/${orderId}`, {
+      headers: { 'Authorization': `Bearer ${access_token}`, 'Content-Type': 'application/json' }
+    });
+    if (!orderResp.ok) throw new Error('Could not verify payment with PayPal');
 
-  const orderData = await orderResp.json();
-  const { status: paymentStatus } = orderData;
-  const customData = orderData.purchase_units?.[0]?.custom_id ? JSON.parse(orderData.purchase_units[0].custom_id) : null;
-  const amount = orderData.purchase_units?.[0]?.amount?.value;
+    const orderData = await orderResp.json();
+    const { status: paymentStatus } = orderData;
+    const customData = orderData.purchase_units?.[0]?.custom_id ? JSON.parse(orderData.purchase_units[0].custom_id) : null;
+    const amount = orderData.purchase_units?.[0]?.amount?.value;
 
-  if (paymentStatus !== 'COMPLETED' && paymentStatus !== 'CAPTURED') {
-    return jsonResponse({ success: false, error: `Payment not completed. Status: ${paymentStatus}` });
-  }
+    if (paymentStatus !== 'COMPLETED' && paymentStatus !== 'CAPTURED') {
+      return jsonResponse({ success: false, error: `Payment not completed. Status: ${paymentStatus}` });
+    }
 
-  const creditPacks = { starter: { credits: 10 }, popular: { credits: 30 }, power: { credits: 100 } };
-  const packId = customData?.packId || 'unknown';
-  const creditsToAdd = (creditPacks[packId]?.credits) || parseInt(customData?.credits) || Math.round(parseFloat(amount || 0) * 10);
+    const creditPacks = { starter: { credits: 10 }, popular: { credits: 30 }, power: { credits: 100 } };
+    const packId = customData?.packId || 'unknown';
+    const creditsToAdd = (creditPacks[packId]?.credits) || parseInt(customData?.credits) || Math.round(parseFloat(amount || 0) * 10);
 
-  const existingRestoreUser = await env.DB.prepare('SELECT id FROM users WHERE id = ?').bind(userId).first();
-  if (!existingRestoreUser) {
+    const existingRestoreUser = await env.DB.prepare('SELECT id FROM users WHERE id = ?').bind(userId).first();
+    if (!existingRestoreUser) {
+      await env.DB.prepare(
+        `INSERT INTO users (id, email, credits, total_purchased, total_used, created_at, updated_at)
+         VALUES (?, ?, 0, 0, 0, datetime('now', 'utc'), datetime('now', 'utc'))`
+      ).bind(userId, `user_${userId}@placeholder.local`).run();
+    }
+
     await env.DB.prepare(
-      `INSERT INTO users (id, email, credits, total_purchased, total_used, created_at, updated_at)
-       VALUES (?, ?, 0, 0, 0, datetime('now', 'utc'), datetime('now', 'utc'))`
-    ).bind(userId, `user_${userId}@placeholder.local`).run();
+      'INSERT INTO payments (user_id, order_id, pack_id, credits, amount, status) VALUES (?, ?, ?, ?, ?, ?)'
+    ).bind(userId, orderId, packId, creditsToAdd, parseFloat(amount || 0), 'completed').run();
+
+    await env.DB.prepare('UPDATE users SET credits = credits + ?, total_purchased = total_purchased + ? WHERE id = ?')
+      .bind(creditsToAdd, creditsToAdd, userId).run();
+
+    const updatedUser = await env.DB.prepare('SELECT credits FROM users WHERE id = ?').bind(userId).first();
+    console.log(`[restore-credits] SUCCESS: Restored ${creditsToAdd} credits for order ${orderId}`);
+
+    return jsonResponse({ success: true, creditsAdded: creditsToAdd, currentBalance: updatedUser?.credits || creditsToAdd });
+
+  } catch (error) {
+    console.error('[restore-credits] ERROR:', error.message, error.stack);
+    return jsonResponse({ success: false, error: 'INTERNAL_ERROR', message: error.message }, 500);
   }
-
-  await env.DB.prepare(
-    'INSERT INTO payments (user_id, order_id, pack_id, credits, amount, status) VALUES (?, ?, ?, ?, ?, ?)'
-  ).bind(userId, orderId, packId, creditsToAdd, parseFloat(amount || 0), 'completed').run();
-
-  await env.DB.prepare('UPDATE users SET credits = credits + ?, total_purchased = total_purchased + ? WHERE id = ?')
-    .bind(creditsToAdd, creditsToAdd, userId).run();
-
-  const updatedUser = await env.DB.prepare('SELECT credits FROM users WHERE id = ?').bind(userId).first();
-  console.log(`[restore-credits] SUCCESS: Restored ${creditsToAdd} credits for order ${orderId}`);
-
-  return jsonResponse({ success: true, creditsAdded: creditsToAdd, currentBalance: updatedUser?.credits || creditsToAdd });
 }
 
 async function handlePaypalCreate(request, env) {
