@@ -512,65 +512,17 @@
     // ============ USER AUTH ============
     
     async function checkAuthStatus() {
-      let firstCallback = true;
-      
-      auth.onAuthStateChanged(async (user) => {
-        if (firstCallback) {
-          firstCallback = false;
-          // If user is null on first callback, just wait — a second callback with the real user will come
-          if (!user) return;
-        }
-        
-        if (user) {
-          currentUser = user;
-          document.getElementById('loginBtn').style.display = 'none';
-          document.getElementById('userArea').style.display = 'flex';
-          document.getElementById('userName').textContent = user.displayName || user.email.split('@')[0];
-          if (user.photoURL) {
-            document.getElementById('userAvatar').src = user.photoURL;
-          }
-          
-          // Hide signup CTA, hide quota bar for logged in users
-          document.getElementById('signupCta').classList.remove('show');
-          document.getElementById('quotaBar').style.display = 'none';
-          document.getElementById('creditsBadge').textContent = '0 credits';
-          
-          // Hide "How it works" section for logged in users
-          document.querySelector('.how-it-works')?.classList.add('hidden');
-          
-          // Register user with backend
-          fetch(API_BASE + '/api/user/register', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({
-              id: user.uid,
-              email: user.email,
-              name: user.displayName,
-              avatar: user.photoURL || '',
-              provider: 'google'
-            })
-          });
-          
-          await loadQuota();
-        } else {
-          currentUser = null;
-          document.getElementById('loginBtn').style.display = 'block';
-          document.getElementById('userArea').style.display = 'none';
-          document.getElementById('userMenu').classList.remove('show');
-          
-          // Show signup CTA, hide quota bar
-          document.getElementById('signupCta').classList.add('show');
-          document.getElementById('quotaBar').style.display = 'none';
-          
-          document.querySelector('.how-it-works')?.classList.remove('hidden');
-          await loadQuota();
-        }
-      });
-      
-      // If Firebase restored session before we registered the listener, check currentUser now
-      if (auth.currentUser && !currentUser) {
-        const user = auth.currentUser;
+      // auth.authStateReady() resolves only AFTER Firebase has resolved the current user session.
+      // Without this, auth.currentUser can be null even for logged-in users because
+      // onAuthStateChanged hasn't fired yet when we check synchronously.
+      try {
+        await auth.authStateReady();
+      } catch (e) {
+        console.warn('authStateReady failed, proceeding anyway:', e);
+      }
+
+      const user = auth.currentUser;
+      if (user) {
         currentUser = user;
         document.getElementById('loginBtn').style.display = 'none';
         document.getElementById('userArea').style.display = 'flex';
@@ -578,6 +530,7 @@
         if (user.photoURL) document.getElementById('userAvatar').src = user.photoURL;
         document.getElementById('signupCta').classList.remove('show');
         document.getElementById('quotaBar').style.display = 'none';
+        document.getElementById('creditsBadge').textContent = '0 credits';
         document.querySelector('.how-it-works')?.classList.add('hidden');
         fetch(API_BASE + '/api/user/register', {
           method: 'POST',
@@ -586,7 +539,47 @@
           body: JSON.stringify({ id: user.uid, email: user.email, name: user.displayName, avatar: user.photoURL || '', provider: 'google' })
         });
         await loadQuota();
+      } else {
+        currentUser = null;
+        document.getElementById('loginBtn').style.display = 'block';
+        document.getElementById('userArea').style.display = 'none';
+        document.getElementById('userMenu').classList.remove('show');
+        document.getElementById('signupCta').classList.add('show');
+        document.getElementById('quotaBar').style.display = 'none';
+        document.querySelector('.how-it-works')?.classList.remove('hidden');
+        await loadQuota();
       }
+
+      // Listen for future sign-in / sign-out
+      auth.onAuthStateChanged(async (user) => {
+        if (user === currentUser) return;
+        if (user) {
+          currentUser = user;
+          document.getElementById('loginBtn').style.display = 'none';
+          document.getElementById('userArea').style.display = 'flex';
+          document.getElementById('userName').textContent = user.displayName || user.email.split('@')[0];
+          if (user.photoURL) document.getElementById('userAvatar').src = user.photoURL;
+          document.getElementById('signupCta').classList.remove('show');
+          document.getElementById('quotaBar').style.display = 'none';
+          document.querySelector('.how-it-works')?.classList.add('hidden');
+          fetch(API_BASE + '/api/user/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ id: user.uid, email: user.email, name: user.displayName, avatar: user.photoURL || '', provider: 'google' })
+          });
+          await loadQuota();
+        } else {
+          currentUser = null;
+          document.getElementById('loginBtn').style.display = 'block';
+          document.getElementById('userArea').style.display = 'none';
+          document.getElementById('userMenu').classList.remove('show');
+          document.getElementById('signupCta').classList.add('show');
+          document.getElementById('quotaBar').style.display = 'none';
+          document.querySelector('.how-it-works')?.classList.remove('hidden');
+          await loadQuota();
+        }
+      });
     }
 
     // Sign in with Google
