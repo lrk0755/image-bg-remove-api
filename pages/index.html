@@ -445,16 +445,42 @@
 
     // ============ QUOTA MANAGEMENT ============
     
-    async function loadQuota() {
-      try {
-        const user = firebase.auth().currentUser;
-        const url = new URL(API_BASE + '/api/quota');
-        if (user) url.searchParams.set('userId', user.uid);
-        const resp = await fetch(url.toString(), { credentials: 'include' });
-        currentQuota = await resp.json();
-        updateQuotaUI();
-      } catch (e) {
-        console.error('Failed to load quota:', e);
+    async function loadQuota(options = {}) {
+      const { retries = 2, timeoutMs = 8000 } = options;
+      const user = firebase.auth().currentUser;
+      const url = new URL(API_BASE + '/api/quota');
+      if (user) url.searchParams.set('userId', user.uid);
+
+      for (let attempt = 0; attempt <= retries; attempt++) {
+        try {
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), timeoutMs);
+          const resp = await fetch(url.toString(), {
+            credentials: 'include',
+            signal: controller.signal
+          });
+          clearTimeout(timer);
+
+          if (!resp.ok) {
+            throw new Error(`HTTP ${resp.status}`);
+          }
+
+          const data = await resp.json();
+
+          // Sanity check: if API says allowed but remaining is 0, trust remaining
+          if (data.allowed === true && data.remaining === 0 && !data.guest) {
+            data.allowed = false;
+          }
+
+          currentQuota = data;
+          updateQuotaUI();
+          return; // Success
+        } catch (e) {
+          console.warn(`loadQuota attempt ${attempt + 1} failed:`, e.message);
+          if (attempt === retries) {
+            console.error('loadQuota: All retries exhausted, preserving previous state');
+          }
+        }
       }
     }
     
@@ -512,13 +538,14 @@
     // ============ USER AUTH ============
     
     async function checkAuthStatus() {
-      // auth.authStateReady() resolves only AFTER Firebase has resolved the current user session.
-      // Without this, auth.currentUser can be null even for logged-in users because
-      // onAuthStateChanged hasn't fired yet when we check synchronously.
+      // Wait for Firebase session to resolve — but don't crash if network fails
       try {
-        await auth.authStateReady();
+        if (auth.authStateReady) {
+          await auth.authStateReady();
+        }
       } catch (e) {
-        console.warn('authStateReady failed, proceeding anyway:', e);
+        console.warn('authStateReady unavailable or failed (network issue):', e.message);
+        // Proceed anyway — auth.currentUser may still work for cached sessions
       }
 
       const user = auth.currentUser;
@@ -597,7 +624,11 @@
           console.error('Sign in error:', error);
           isSigningIn = false;
           if (error.code !== 'auth/cancelled-popup-request') {
-            alert('Sign in failed: ' + error.message);
+            let msg = error.message;
+            if (error.code === 'auth/network-request-failed') {
+              msg = 'Network error. Check your internet connection and ad blockers, then try again.';
+            }
+            alert('Sign in failed: ' + msg);
           }
         });
     };
