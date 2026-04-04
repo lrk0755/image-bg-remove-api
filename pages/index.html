@@ -448,7 +448,8 @@
     async function loadQuota(options = {}) {
       const { retries = 2, timeoutMs = 8000 } = options;
       const user = firebase.auth().currentUser;
-      const url = new URL(API_BASE + '/api/quota');
+      const base = API_BASE || window.location.origin;
+      const url = new URL(base + '/api/quota');
       if (user) url.searchParams.set('userId', user.uid);
 
       for (let attempt = 0; attempt <= retries; attempt++) {
