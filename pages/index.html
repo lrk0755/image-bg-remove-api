@@ -445,7 +445,11 @@
 
     // ============ QUOTA MANAGEMENT ============
     
+    let isLoadingQuota = false;
+    
     async function loadQuota(options = {}) {
+      if (isLoadingQuota) return;
+      isLoadingQuota = true;
       const { retries = 2, timeoutMs = 8000 } = options;
       const user = firebase.auth().currentUser;
       const base = API_BASE || window.location.origin;
@@ -483,6 +487,8 @@
           }
         }
       }
+    } finally {
+      isLoadingQuota = false;
     }
     
     function updateQuotaUI() {
