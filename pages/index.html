@@ -445,66 +445,18 @@
 
     // ============ QUOTA MANAGEMENT ============
     
-    let isLoadingQuota = false;
-    
-    async function loadQuota(options = {}) {
-      if (isLoadingQuota) return;
-      isLoadingQuota = true;
-      const { retries = 2, timeoutMs = 8000 } = options;
-      const user = firebase.auth().currentUser;
-      const base = API_BASE || window.location.origin;
-      const url = new URL(base + '/api/quota');
-      if (user) url.searchParams.set('userId', user.uid);
-
-      let lastError = null;
-      let success = false;
-      for (let attempt = 0; attempt <= retries; attempt++) {
-        try {
-          const controller = new AbortController();
-          const timer = setTimeout(() => controller.abort(), timeoutMs);
-          const resp = await fetch(url.toString(), {
-            credentials: 'include',
-            signal: controller.signal
-          });
-          clearTimeout(timer);
-
-          if (!resp.ok) {
-            throw new Error(`HTTP ${resp.status}`);
-          }
-
-          const data = await resp.json();
-
-          // Sanity check: if API says allowed but remaining is 0, trust remaining
-          if (data.allowed === true && data.remaining === 0 && !data.guest) {
-            data.allowed = false;
-          }
-
-          currentQuota = data;
-          updateQuotaUI();
-          success = true;
-          return; // Success
-        } catch (e) {
-          lastError = e;
-          console.warn(`loadQuota attempt ${attempt + 1} failed:`, e.message);
-        }
-      }
-
-      // All retries exhausted — fallback to guest quota so UI isn't stuck
-      if (!success && !currentQuota) {
-        currentQuota = {
-          allowed: true,
-          watermark: true,
-          remaining: 1,
-          guest: true,
-          plan: 'guest',
-          message: 'Guest trial: 1 free use left'
-        };
+    async function loadQuota() {
+      try {
+        const user = firebase.auth().currentUser;
+        const base = API_BASE || window.location.origin || '';
+        const url = new URL(base + '/api/quota');
+        if (user) url.searchParams.set('userId', user.uid);
+        const resp = await fetch(url.toString(), { credentials: 'include' });
+        currentQuota = await resp.json();
         updateQuotaUI();
+      } catch (e) {
+        console.error('Failed to load quota:', e.message);
       }
-      if (!success) {
-        console.error('loadQuota: All retries failed:', lastError?.message);
-      }
-      isLoadingQuota = false;
     }
     
     function updateQuotaUI() {
