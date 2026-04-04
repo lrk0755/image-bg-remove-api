@@ -457,6 +457,7 @@
       if (user) url.searchParams.set('userId', user.uid);
 
       let lastError = null;
+      let success = false;
       for (let attempt = 0; attempt <= retries; attempt++) {
         try {
           const controller = new AbortController();
@@ -480,6 +481,7 @@
 
           currentQuota = data;
           updateQuotaUI();
+          success = true;
           return; // Success
         } catch (e) {
           lastError = e;
@@ -488,7 +490,7 @@
       }
 
       // All retries exhausted — fallback to guest quota so UI isn't stuck
-      if (!currentQuota) {
+      if (!success && !currentQuota) {
         currentQuota = {
           allowed: true,
           watermark: true,
@@ -499,8 +501,9 @@
         };
         updateQuotaUI();
       }
-      console.error('loadQuota: All retries failed:', lastError?.message);
-    } finally {
+      if (!success) {
+        console.error('loadQuota: All retries failed:', lastError?.message);
+      }
       isLoadingQuota = false;
     }
     
