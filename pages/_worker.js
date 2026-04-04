@@ -372,7 +372,15 @@ async function handleRemoveBg(request, env) {
     }
 
     const resultBuffer = await response.arrayBuffer();
-    const base64 = btoa(String.fromCharCode(...new Uint8Array(resultBuffer)));
+    // Use chunked conversion to avoid stack overflow on large files
+    const bytes = new Uint8Array(resultBuffer);
+    let binary = '';
+    const chunkSize = 8192;
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+      const chunk = bytes.slice(i, i + chunkSize);
+      binary += String.fromCharCode.apply(null, chunk);
+    }
+    const base64 = btoa(binary);
     return jsonResponse({ image: base64 });
 
   } catch (error) {
