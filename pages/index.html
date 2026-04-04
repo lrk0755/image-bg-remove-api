@@ -456,6 +456,7 @@
       const url = new URL(base + '/api/quota');
       if (user) url.searchParams.set('userId', user.uid);
 
+      let lastError = null;
       for (let attempt = 0; attempt <= retries; attempt++) {
         try {
           const controller = new AbortController();
@@ -481,12 +482,24 @@
           updateQuotaUI();
           return; // Success
         } catch (e) {
+          lastError = e;
           console.warn(`loadQuota attempt ${attempt + 1} failed:`, e.message);
-          if (attempt === retries) {
-            console.error('loadQuota: All retries exhausted, preserving previous state');
-          }
         }
       }
+
+      // All retries exhausted — fallback to guest quota so UI isn't stuck
+      if (!currentQuota) {
+        currentQuota = {
+          allowed: true,
+          watermark: true,
+          remaining: 1,
+          guest: true,
+          plan: 'guest',
+          message: 'Guest trial: 1 free use left'
+        };
+        updateQuotaUI();
+      }
+      console.error('loadQuota: All retries failed:', lastError?.message);
     } finally {
       isLoadingQuota = false;
     }
