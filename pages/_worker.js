@@ -355,8 +355,20 @@ async function handleRemoveBg(request, env) {
   if (request.method === 'OPTIONS') return optionsResponse('POST, OPTIONS');
 
   try {
-    const { image, watermark } = await request.json();
+    const { image, watermark, userId } = await request.json();
     if (!image) return jsonResponse({ error: 'No image provided' }, 400);
+
+    // Deduct credit for logged-in users (not guests)
+    if (userId) {
+      const user = await env.DB.prepare('SELECT credits FROM users WHERE id = ?').bind(userId).first();
+      if (!user || user.credits <= 0) {
+        return jsonResponse({ error: 'No credits left. Please purchase more credits.' }, 403);
+      }
+      // Deduct 1 credit and update total_used
+      await env.DB.prepare(
+        'UPDATE users SET credits = credits - 1, total_used = total_used + 1, updated_at = datetime(\'now\', \'utc\') WHERE id = ? AND credits > 0'
+      ).bind(userId).run();
+    }
 
     const apiKey = env.REMOVE_BG_API_KEY || '1teo3E5gQ5Rk82dN7CCXFZ1G';
     const response = await fetch('https://api.remove.bg/v1.0/removebg', {

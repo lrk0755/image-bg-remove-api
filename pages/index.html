@@ -709,12 +709,14 @@
         const base64 = e.target.result.split(',')[1];
         
         try {
+          const user = firebase.auth().currentUser;
           const res = await fetch(API_BASE + '/api/remove-bg', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ 
+            body: JSON.stringify({
               image: base64,
-              watermark: currentQuota?.watermark || false
+              watermark: currentQuota?.watermark || false,
+              userId: user ? user.uid : null
             })
           });
           
