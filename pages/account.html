@@ -118,6 +118,24 @@
       border-radius: 12px;
       font-size: 11px;
       font-weight: 600;
+    }
+
+    /* Usage History */
+    .usage-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 0;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .usage-item:last-child { border-bottom: none; }
+    .usage-info { display: flex; align-items: center; gap: 12px; }
+    .usage-icon { font-size: 28px; }
+    .usage-operation { font-weight: 600; color: #333; font-size: 15px; }
+    .usage-meta { font-size: 12px; color: #999; margin-top: 2px; }
+    .usage-right { text-align: right; }
+    .usage-credits { font-weight: 700; color: var(--danger); font-size: 16px; }
+    .usage-date { font-size: 13px; color: #888; margin-top: 2px; }
       margin-top: 4px;
     }
     .status-completed { background: #d1fae5; color: #059669; }
@@ -240,6 +258,18 @@
       <div id="purchasesList"></div>
     </div>
 
+    <!-- Usage History -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><span class="icon">📤</span> Usage History</div>
+      </div>
+      <div id="usageLoading" class="loading-state">
+        <div class="loading-spinner"></div>
+        Loading...
+      </div>
+      <div id="usageList"></div>
+    </div>
+
     <!-- Account Info -->
     <div class="card">
       <div class="card-header">
@@ -329,6 +359,9 @@
           // Load purchase history
           loadPurchaseHistory(user.uid);
 
+          // Load usage history
+          loadUsageHistory(user.uid);
+
           // Load user details from DB
           loadUserDetails(user.uid);
 
@@ -393,6 +426,48 @@
       } catch (e) {
         loading.style.display = 'none';
         list.innerHTML = '<div class="empty-state">Failed to load purchase history.</div>';
+      }
+    }
+
+    async function loadUsageHistory(userId) {
+      const loading = document.getElementById('usageLoading');
+      const list = document.getElementById('usageList');
+
+      try {
+        const resp = await fetch('/api/usage?userId=' + userId);
+        const data = await resp.json();
+        const usage = data.usage || [];
+
+        loading.style.display = 'none';
+
+        if (usage.length === 0) {
+          list.innerHTML = '<div class="empty-state">No usage yet. Start removing backgrounds!</div>';
+          return;
+        }
+
+        list.innerHTML = usage.map(u => {
+          const icon = u.operation === 'use' ? '🖼️' : u.operation === 'refund' ? '↩️' : '📦';
+          const date = new Date(u.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+          const creditsClass = u.credits > 0 ? 'var(--success)' : 'var(--danger)';
+          return `
+            <div class="usage-item">
+              <div class="usage-info">
+                <span class="usage-icon">${icon}</span>
+                <div>
+                  <div class="usage-operation">${u.description || u.operation}</div>
+                  <div class="usage-meta">${date}</div>
+                </div>
+              </div>
+              <div class="usage-right">
+                <div class="usage-credits" style="color: ${creditsClass}">${u.credits > 0 ? '+' : ''}${u.credits}</div>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+      } catch (e) {
+        loading.style.display = 'none';
+        list.innerHTML = '<div class="empty-state">Failed to load usage history.</div>';
       }
     }
 

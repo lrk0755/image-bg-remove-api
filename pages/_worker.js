@@ -45,6 +45,11 @@ export default {
         return handleUserQuota(request, env);
       }
 
+      // ─── GET /api/usage ──────────────────────────────────────────
+      if (method === 'GET' && (path === 'usage' || path === 'usage/')) {
+        return handleUsage(request, env);
+      }
+
       // ─── POST /api/add-credits ───────────────────────────────────
       if (method === 'POST' && (path === 'add-credits' || path === 'add-credits/')) {
         return handleAddCredits(request, env);
@@ -368,6 +373,10 @@ async function handleRemoveBg(request, env) {
       await env.DB.prepare(
         'UPDATE users SET credits = credits - 1, total_used = total_used + 1, updated_at = datetime(\'now\', \'utc\') WHERE id = ? AND credits > 0'
       ).bind(userId).run();
+      // Log the usage
+      await env.DB.prepare(
+        'INSERT INTO usage_log (user_id, credits, operation, description) VALUES (?, 1, \'use\', \'Image background removal\')'
+      ).bind(userId).run();
     }
 
     const apiKey = env.REMOVE_BG_API_KEY || '1teo3E5gQ5Rk82dN7CCXFZ1G';
@@ -409,6 +418,16 @@ async function handlePurchases(request, env) {
     'SELECT id, pack_id, credits, amount, status, created_at FROM payments WHERE user_id = ? ORDER BY created_at DESC LIMIT 50'
   ).bind(userId).all();
   return jsonResponse({ purchases: purchases?.results || [] });
+}
+
+async function handleUsage(request, env) {
+  if (request.method === 'OPTIONS') return optionsResponse();
+  const userId = new URL(request.url).searchParams.get('userId');
+  if (!userId) return jsonResponse({ error: 'userId required' }, 400);
+  const usage = await env.DB.prepare(
+    'SELECT id, credits, operation, description, created_at FROM usage_log WHERE user_id = ? ORDER BY created_at DESC LIMIT 50'
+  ).bind(userId).all();
+  return jsonResponse({ usage: usage?.results || [] });
 }
 
 async function handleConfig(request, env) {

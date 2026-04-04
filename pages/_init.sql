@@ -30,6 +30,17 @@ CREATE TABLE IF NOT EXISTS payments (
   FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
+-- Usage log table (credit deductions)
+CREATE TABLE IF NOT EXISTS usage_log (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id TEXT NOT NULL,
+  credits INTEGER NOT NULL,
+  operation TEXT NOT NULL,
+  description TEXT,
+  created_at TEXT DEFAULT (datetime('now', 'utc')),
+  FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_payments_user ON payments(user_id);
 CREATE INDEX IF NOT EXISTS idx_payments_order ON payments(order_id);
