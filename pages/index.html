@@ -538,14 +538,12 @@
     // ============ USER AUTH ============
     
     async function checkAuthStatus() {
-      // Wait for Firebase session to resolve — but don't crash if network fails
+      // authStateReady() ensures onAuthStateChanged has fired at least once
+      // so auth.currentUser is reliable (not null for cached sessions)
       try {
-        if (auth.authStateReady) {
-          await auth.authStateReady();
-        }
+        await auth.authStateReady();
       } catch (e) {
-        console.warn('authStateReady unavailable or failed (network issue):', e.message);
-        // Proceed anyway — auth.currentUser may still work for cached sessions
+        console.warn('authStateReady failed, proceeding anyway:', e.message);
       }
 
       const user = auth.currentUser;
